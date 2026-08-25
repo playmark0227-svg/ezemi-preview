@@ -1,0 +1,172 @@
+/* ============================================================
+   エビデンスゼミ ─ 共通トークン
+   紙・墨・朱。角丸なし。色は足さずコントラストと余白で解く。
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;600;700&display=swap');
+
+:root{
+  /* 面 */
+  --paper:#f4f1ea;
+  --card:#fffefb;
+  --card-2:#faf7f0;
+  --ink-plate:#191713;
+
+  /* 文字 */
+  --ink:#17140f;
+  --ink-2:#5b544a;
+  --ink-3:#918879;
+  --ink-inv:#f4f1ea;
+
+  /* 罫 */
+  --rule:#d8d0c0;
+  --rule-strong:#17140f;
+  --rule-faint:#e8e2d6;
+
+  /* 朱（落款）── 注意・限定・締切だけに使う */
+  --seal:#9c2b1c;
+  --seal-2:#c4634f;
+  --seal-bg:#f6e7e3;
+
+  /* 藍 ── 進行中・解錠済みの標 */
+  --indigo:#1f3a4d;
+  --indigo-bg:#e6ecf0;
+
+  --ok:#2f5d3a;
+  --ok-bg:#e6efe7;
+  --warn:#7a5a12;
+  --warn-bg:#f6efdc;
+
+  --sans:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;
+  --serif:'Noto Serif JP','Hiragino Mincho ProN','Yu Mincho',serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
+
+  --w:1120px;
+  --w-narrow:760px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.9;
+  letter-spacing:.02em;
+  font-feature-settings:'palt' 1;
+}
+img{max-width:100%;display:block}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+table{border-collapse:collapse;width:100%}
+
+/* ---------- 見出し ---------- */
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;line-height:1.5;letter-spacing:.06em}
+.ttl-l{font-size:clamp(26px,4.2vw,40px)}
+.ttl-m{font-size:clamp(20px,2.6vw,26px)}
+.ttl-s{font-size:17px}
+.bar-ttl{padding-bottom:14px;position:relative;margin-bottom:26px}
+.bar-ttl::after{content:'';position:absolute;left:0;bottom:0;width:52px;height:2px;background:var(--ink)}
+.eyebrow{font-size:11px;letter-spacing:.28em;color:var(--ink-3);font-weight:500;display:block;margin-bottom:12px}
+
+/* ---------- 区切り ---------- */
+.rule{height:1px;background:var(--rule);border:0}
+.rule-strong{height:1px;background:var(--rule-strong);border:0}
+
+/* ---------- 面 ---------- */
+.card{background:var(--card);border:1px solid var(--rule);padding:26px}
+.card-flat{background:var(--card-2);border:1px solid var(--rule-faint);padding:20px}
+
+/* ---------- ボタン ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:13px 30px;font-size:13px;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;border-radius:0;transition:background .15s,color .15s;
+  text-decoration:none;white-space:nowrap;
+}
+.btn:hover{background:var(--ink);color:var(--ink-inv)}
+.btn-fill{background:var(--ink);color:var(--ink-inv)}
+.btn-fill:hover{background:#3a342b}
+.btn-seal{border-color:var(--seal);color:var(--seal)}
+.btn-seal:hover{background:var(--seal);color:#fff}
+.btn-s{padding:8px 16px;font-size:12px;letter-spacing:.06em}
+.btn-xs{padding:5px 11px;font-size:11px;letter-spacing:.04em;font-weight:500}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.btn:disabled:hover{background:transparent;color:var(--ink)}
+.btn-ghost{border-color:var(--rule);color:var(--ink-2);font-weight:500}
+.btn-ghost:hover{background:var(--ink);color:var(--ink-inv);border-color:var(--ink)}
+
+/* ---------- 標（バッジ） ---------- */
+.tag{
+  display:inline-block;font-size:11px;letter-spacing:.1em;font-weight:500;
+  padding:3px 9px;border:1px solid var(--rule);color:var(--ink-2);background:var(--card);
+  white-space:nowrap;line-height:1.7;
+}
+.tag-seal{border-color:var(--seal);color:var(--seal);background:var(--seal-bg)}
+.tag-indigo{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-bg)}
+.tag-ok{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
+.tag-warn{border-color:var(--warn);color:var(--warn);background:var(--warn-bg)}
+.tag-dim{color:var(--ink-3);border-style:dashed}
+
+/* ---------- 入力 ---------- */
+.field{display:block;margin-bottom:18px}
+.field > .lbl{display:block;font-size:12px;letter-spacing:.12em;color:var(--ink-2);margin-bottom:7px;font-weight:500}
+.field .hint{font-size:12px;color:var(--ink-3);line-height:1.7;margin-top:6px}
+input[type=text],input[type=email],input[type=number],input[type=password],
+input[type=date],input[type=datetime-local],select,textarea{
+  width:100%;background:var(--card);border:1px solid var(--rule);
+  padding:11px 13px;font-size:14px;border-radius:0;outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--ink)}
+textarea{line-height:1.9;resize:vertical;min-height:120px}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13px;line-height:1.8}
+.check input{margin-top:5px;flex:0 0 auto;accent-color:var(--ink)}
+
+/* ---------- 表 ---------- */
+.tbl{font-size:13px;background:var(--card)}
+.tbl th{
+  text-align:left;font-weight:500;font-size:11px;letter-spacing:.12em;color:var(--ink-2);
+  padding:10px 12px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;
+}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--rule-faint);vertical-align:middle}
+.tbl tbody tr:hover{background:var(--card-2)}
+.tbl .num{font-variant-numeric:tabular-nums;text-align:right;font-family:var(--mono);font-size:12px}
+
+/* ---------- 汎用 ---------- */
+.muted{color:var(--ink-3)}
+.small{font-size:12px;line-height:1.8}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.row-between{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.stack-s > * + *{margin-top:10px}
+.stack > * + *{margin-top:20px}
+.stack-l > * + *{margin-top:40px}
+.wrap{max-width:var(--w);margin:0 auto;padding:0 24px}
+.wrap-narrow{max-width:var(--w-narrow);margin:0 auto;padding:0 24px}
+.center{text-align:center}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.hidden{display:none !important}
+
+/* ---------- 通知トースト ---------- */
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--ink-plate);color:var(--ink-inv);padding:12px 22px;font-size:13px;letter-spacing:.04em;border:1px solid var(--ink-plate);max-width:90vw}
+.toast.seal{background:var(--seal);border-color:var(--seal)}
+
+/* ---------- モーダル ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(23,20,15,.55);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.modal{background:var(--card);border:1px solid var(--ink);max-width:620px;width:100%;padding:30px;max-height:88vh;overflow:auto}
+.modal-wide{max-width:920px}
+
+/* ---------- 検証用バー（本番では外す） ---------- */
+#devbar{
+  position:fixed;right:0;bottom:0;z-index:180;background:var(--ink-plate);color:var(--ink-inv);
+  font-size:11px;letter-spacing:.06em;display:flex;align-items:center;gap:10px;padding:8px 14px;
+  border-top:1px solid #000;border-left:1px solid #000;
+}
+#devbar button{background:transparent;border:1px solid rgba(244,241,234,.4);color:inherit;font-size:11px;padding:3px 9px;cursor:pointer}
+#devbar button:hover{background:rgba(244,241,234,.15)}
+#devbar .dev-lbl{color:#a49a89}
+
+@media print{#devbar,.no-print{display:none !important}}
