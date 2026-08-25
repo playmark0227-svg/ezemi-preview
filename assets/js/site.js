@@ -6,8 +6,8 @@
   var EZ = window.EZ, S = EZ.store, R = EZ.rules, U = EZ.ui;
   var esc = U.esc, nl2br = U.nl2br, $ = U.$, $$ = U.$$;
 
-  EZ.demo.ensure();
-  R.refresh();
+  var CLOUD = S.mode() === 'cloud';
+  if (!CLOUD) { EZ.demo.ensure(); R.refresh(); }
 
   var db = S.read();
   $$('[data-bind]').forEach(function (el) {
@@ -213,8 +213,11 @@
       '<span>LINE公式アカウントでも配信のお知らせを受け取る</span></label>' +
       '<label class="check" style="margin-bottom:1.7rem"><input type="checkbox" id="f-agree">' +
       '<span><a href="#/terms">利用規約</a>・<a href="#/privacy">プライバシーポリシー</a>・<a href="#/tokushoho">特定商取引法に基づく表記</a>に同意します</span></label>' +
-      '<button class="btn btn-fill" id="f-submit" style="width:100%">お支払いに進む</button>' +
-      '<p class="small muted" style="margin-top:.9rem">次の画面はカード決済です。カード情報は当社では保持しません。</p>' +
+      '<button class="btn btn-fill" id="f-submit" style="width:100%">' +
+      (CLOUD ? '登録して会員ページへ' : 'お支払いに進む') + '</button>' +
+      '<p class="small muted" style="margin-top:.9rem">' +
+      (CLOUD ? 'いまはお支払いの手続きはありません。開始時にあらためてご案内します。'
+             : '次の画面はカード決済です。カード情報は当社では保持しません。') + '</p>' +
       '</div>' +
       '<div class="signup-side">' +
       '<span class="eyebrow">お支払い内容</span>' +
@@ -234,9 +237,13 @@
     h += '<div class="bill-total"><span>本日のお支払い</span><span>' + R.fmtYen(p.total) + '</span></div>';
     if (p.coupon) h += '<p style="margin-top:12px"><span class="tag tag-alert">' + esc(p.coupon.label) + '</span></p>';
     else if (code) h += '<p class="small" style="margin-top:12px;color:var(--coral-ink)">このクーポンは使えません</p>';
-    h += '<p class="bill-note">次回のお支払いは ' + R.fmtDate(R.addMonths(S.clock.now(), p.first === 0 ? 1 : 1)) + ' です。' +
-      '以降は入会日を基準に毎月同じ日にお支払いいただきます。' +
-      '解約はいつでも会員ページからでき、その請求期間の末日までは見られます。</p>';
+    h += '<p class="bill-note">' +
+      (CLOUD
+        ? 'いまはお支払いの手続きはありません。開始時期はあらためてご案内します。解約はいつでも会員ページからできます。'
+        : '次回のお支払いは ' + R.fmtDate(R.addMonths(S.clock.now(), 1)) + ' です。' +
+          '以降は入会日を基準に毎月同じ日にお支払いいただきます。' +
+          '解約はいつでも会員ページからでき、その請求期間の末日までは見られます。') +
+      '</p>';
     $('#bill').innerHTML = h;
   }
 
@@ -249,8 +256,49 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return U.toast('メールアドレスを確かめてください');
       if (pass.length < 8) return U.toast('パスワードは8文字以上にしてください');
       if (!$('#f-agree').checked) return U.toast('規約への同意が必要です');
-      checkout({ name: name, email: email, password: pass, coupon: $('#f-coupon').value.trim(), lineLinked: $('#f-line').checked });
+      var input = { name: name, email: email, password: pass, coupon: $('#f-coupon').value.trim(), lineLinked: $('#f-line').checked };
+      if (CLOUD) cloudJoin(input); else checkout(input);
     });
+  }
+
+  /* 本番（決済をつなぐ前）：アカウントを作って、そのまま会員ページへ */
+  function cloudJoin(input) {
+    var p = R.previewCharge(db, input.coupon);
+    if (db.settings.requireCoupon && !p.coupon) {
+      return U.toast('いまは招待コードをお持ちの方のみご入会いただけます', 'alert');
+    }
+    var btn = $('#f-submit');
+    btn.disabled = true; btn.textContent = '登録しています…';
+
+    EZ.cloud.init()
+      .then(function () { return EZ.cloud.signUp(input.email, input.password, input.name); })
+      .then(function (user) {
+        S.attachCloud('member', user.uid, function () {});
+        return new Promise(function (res) { setTimeout(res, 700); })
+          .then(function () {
+            return R.signup({
+              uid: user.uid, name: input.name, email: input.email,
+              coupon: input.coupon, lineLinked: input.lineLinked, skipPayment: true
+            });
+          })
+          .then(function (mem) { return S.flush().then(function () { return mem; }); });
+      })
+      .then(function (mem) {
+        U.modal(
+          '<span class="eyebrow">完了</span>' +
+          '<h3 class="ttl-s" style="margin-bottom:.9rem">ご入会ありがとうございます</h3>' +
+          '<p class="small" style="color:var(--ink-2);margin-bottom:.7rem">会員ページを開きました。第1回はすぐにご覧いただけます。</p>' +
+          '<p class="small" style="color:var(--ink-2);margin-bottom:1.5rem">お支払いの開始については、あらためてご案内します。</p>' +
+          '<a href="member.html" class="btn btn-fill" style="width:100%">会員ページへ</a>',
+          { sticky: true });
+      })
+      .catch(function (err) {
+        btn.disabled = false; btn.textContent = 'お支払いに進む';
+        var c = (err && err.code) || '';
+        if (c === 'auth/email-already-in-use') return U.toast('このメールアドレスはすでに登録されています', 'alert');
+        if (c === 'auth/weak-password') return U.toast('パスワードは6文字以上にしてください', 'alert');
+        U.toast((err && err.message) || '登録できませんでした', 'alert');
+      });
   }
 
   /* 決済画面（Stripe Checkout の位置。本番はここが Stripe の画面に置き換わる） */
@@ -319,5 +367,12 @@
   $('#navToggle').addEventListener('click', function () { $('#nav').classList.toggle('open'); });
   render();
 
-  U.devbar(render);
+  if (CLOUD) {
+    /* 公開側はログイン不要。講座名や料金など、公開してよい設定だけ読みに行く */
+    EZ.cloud.init()
+      .then(function () { S.attachCloud('public', null, function () { render(); }); })
+      .catch(function (e) { console.warn('[site] 設定の読み込みに失敗', e); });
+  } else {
+    U.devbar(render);
+  }
 })();

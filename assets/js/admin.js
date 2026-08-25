@@ -9,19 +9,62 @@
   var db, page = 'home';
   var PASS_KEY = 'ezemi.admin';
 
-  EZ.demo.ensure();
+  if (S.mode() !== 'cloud') EZ.demo.ensure();
   function load() { R.refresh(); db = S.read(); }
 
   /* ================= 入口 ================= */
-  function renderGate(msg) {
+  function loading(msg) {
     $('#root').innerHTML =
-      '<div class="login-wrap"><div class="login-box">' +
-      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>管理画面</small></span></a>' +
+      '<div class="login-wrap"><div class="login-box center">' +
+      '<p class="small muted">' + esc(msg || '読み込んでいます…') + '</p></div></div>';
+  }
+
+  function brandBlock() {
+    return '<a class="brand" href="index.html">' +
+      '<picture><source srcset="assets/img/logo-full.webp" type="image/webp">' +
+      '<img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
+      '<span class="brand__sub">' + esc(db.settings.siteName) + '<small>管理画面</small></span></a>';
+  }
+
+  function authMsg(err) {
+    var c = (err && err.code) || '';
+    if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found')
+      return 'メールアドレスかパスワードが違います';
+    if (c === 'auth/too-many-requests') return '試行が続いたため、しばらく待ってからお試しください';
+    if (c === 'auth/network-request-failed') return 'ネットワークにつながりませんでした';
+    return (err && err.message) || 'うまくいきませんでした';
+  }
+
+  /* 本番：Firebase Authentication でログインし、admins に登録された人だけ通す */
+  function renderCloudGate(msg) {
+    $('#root').innerHTML =
+      '<div class="login-wrap"><div class="login-box">' + brandBlock() +
       '<div class="card">' +
-      (msg ? '<p class="small" style="color:var(--coral);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
+      (msg ? '<p class="small" style="color:var(--coral-ink);margin-bottom:1rem">' + esc(msg) + '</p>' : '') +
+      '<label class="field"><span class="lbl">メールアドレス</span><input type="email" id="a-email" autocomplete="username"></label>' +
+      '<label class="field"><span class="lbl">パスワード</span><input type="password" id="a-pass" autocomplete="current-password"></label>' +
+      '<button class="btn btn-fill" id="a-go" style="width:100%">開く</button>' +
+      '</div></div></div>';
+    $('#a-go').addEventListener('click', cloudGate);
+    $('#a-pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') cloudGate(); });
+  }
+  function cloudGate() {
+    var em = $('#a-email').value.trim(), pw = $('#a-pass').value;
+    if (!em || !pw) return U.toast('メールアドレスとパスワードを入れてください');
+    loading('ログインしています…');
+    EZ.cloud.signIn(em, pw).catch(function (err) { renderCloudGate(authMsg(err)); });
+  }
+
+  function renderGate(msg) {
+    if (S.mode() === 'cloud') return renderCloudGate(msg);
+    $('#root').innerHTML =
+      '<div class="login-wrap"><div class="login-box">' + brandBlock() +
+      '<div class="card">' +
+      (msg ? '<p class="small" style="color:var(--coral-ink);margin-bottom:1rem">' + esc(msg) + '</p>' : '') +
       '<label class="field"><span class="lbl">管理パスワード</span><input type="password" id="a-pass" autocomplete="current-password"></label>' +
       '<button class="btn btn-fill" id="a-go" style="width:100%">開く</button>' +
-      '<p class="small muted" style="margin-top:14px">試作版のパスワードは <span class="mono">ezemi</span> です。本番では別のログインに置き換えます。</p>' +
+      '<p class="small muted" style="margin-top:.9rem">試作版のパスワードは <span class="mono">ezemi</span> です。' +
+      '本番につなぐと、ここは Firebase のログインに変わります。</p>' +
       '</div></div></div>';
     $('#a-go').addEventListener('click', gate);
     $('#a-pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') gate(); });
@@ -60,11 +103,12 @@
 
     return '<div class="app">' +
       '<aside class="side" id="side">' +
-      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>管理画面</small></span></a>' +
+      brandBlock() +
       nav +
       '<div class="side-foot"><div class="who">' + esc(db.settings.representative) + '</div>' +
       '<div class="st">' + R.fmtDate(now) + '</div>' +
-      '<a href="index.html" style="margin-top:6px;display:inline-block">公開サイトを見る</a></div>' +
+      '<a href="index.html" style="margin-top:6px;display:inline-block">公開サイトを見る</a>' +
+      (S.mode() === 'cloud' ? '　<a href="#" id="adminLogout">ログアウト</a>' : '') + '</div>' +
       '</aside><div>' +
       '<div class="mobile-head"><button id="menuBtn">メニュー</button>' +
       '<picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
@@ -258,6 +302,7 @@
       S.update(function (d) {
         var mm = d.members.filter(function (x) { return x.id === m.id; })[0];
         mm.billing.forceFail = !mm.billing.forceFail;
+        S.put('members', mm);
       });
       mod.close(); rerender(); U.toast('設定を変えました');
     });
@@ -351,7 +396,7 @@
       b.addEventListener('click', function () {
         S.update(function (d2) {
           var p = d2.posts.filter(function (x) { return x.id === b.dataset.perm; })[0];
-          if (p) p.permanent = !p.permanent;
+          if (p) { p.permanent = !p.permanent; S.put('posts', p); }
         });
         rerender();
       });
@@ -360,7 +405,7 @@
       b.addEventListener('click', function () {
         U.confirmBox('削除しますか', 'この配信を消します。元に戻せません。', '削除する').then(function (ok) {
           if (!ok) return;
-          S.update(function (d2) { d2.posts = d2.posts.filter(function (x) { return x.id !== b.dataset.delpost; }); });
+          S.del('posts', b.dataset.delpost);
           rerender(); U.toast('削除しました');
         });
       });
@@ -518,6 +563,7 @@
           var l = d.lessons.filter(function (x) { return x.no === no; })[0];
           l.title = $('[data-ltitle="' + no + '"]').value.trim() || l.title;
           l.videoUrl = $('[data-lurl="' + no + '"]').value.trim();
+          S.put('lessons', l);
         });
         U.toast('第' + no + '回を保存しました');
         load();
@@ -530,6 +576,7 @@
           var m = d.materials.filter(function (x) { return x.id === id; })[0];
           m.title = $('[data-mtitle="' + id + '"]').value.trim() || m.title;
           m.note = $('[data-mnote="' + id + '"]').value.trim();
+          S.put('materials', m);
         });
         U.toast('保存しました'); load();
       });
@@ -541,6 +588,7 @@
         S.update(function (d) {
           var m = d.materials.filter(function (x) { return x.id === id; })[0];
           m.file = f.name; m.addedAt = new Date(S.clock.now()).toISOString();
+          S.put('materials', m);
         });
         U.toast('「' + f.name + '」に差し替えました');
         rerender();
@@ -549,6 +597,7 @@
     $('#s-save').addEventListener('click', function () {
       S.update(function (d) {
         $$('[data-setting]').forEach(function (i) { d.settings[i.dataset.setting] = i.value.trim(); });
+        S.put('settings', d.settings);
       });
       U.toast('保存しました'); rerender();
     });
@@ -590,6 +639,7 @@
         d.settings.priceMonthly = Number($('#s-month').value) || 0;
         d.settings.archiveWindowDays = Math.max(1, Number($('#s-win').value) || 30);
         d.settings.pastDueGraceDays = Math.max(1, Number($('#s-grace').value) || 14);
+        S.put('settings', d.settings);
       });
       U.toast('保存しました'); rerender();
     });
@@ -598,6 +648,7 @@
         S.update(function (d) {
           var c = d.coupons.filter(function (x) { return x.code === b.dataset.ctoggle; })[0];
           c.active = !c.active;
+          S.put('coupons', c);
         });
         rerender();
       });
@@ -617,13 +668,11 @@
         var code = $('#c-code', mod).value.trim().toUpperCase();
         if (!code) return U.toast('コードを入れてください');
         if (db.coupons.some(function (c) { return c.code === code; })) return U.toast('同じコードがあります');
-        S.update(function (d) {
-          d.coupons.push({
-            code: code, label: $('#c-label', mod).value.trim() || code,
-            waiveInitial: $('#c-waive', mod).checked,
-            freeMonths: Number($('#c-free', mod).value) || 0,
-            limit: Number($('#c-limit', mod).value) || 0, used: 0, active: true
-          });
+        S.put('coupons', {
+          code: code, label: $('#c-label', mod).value.trim() || code,
+          waiveInitial: $('#c-waive', mod).checked,
+          freeMonths: Number($('#c-free', mod).value) || 0,
+          limit: Number($('#c-limit', mod).value) || 0, used: 0, active: true
         });
         mod.close(); rerender(); U.toast('作りました');
       });
@@ -650,12 +699,47 @@
 
   /* ================= データ ================= */
   function viewData() {
-    var h = pagehead('データ', 'バックアップと書き出し。試作段階ではこの端末のブラウザに保存しています。');
+    var cloud = S.mode() === 'cloud';
+    var cfg = EZ.cloud.config();
+    var h = pagehead('データ',
+      cloud ? '本番につながっています。データは Firebase（Firestore）に入っています。'
+            : 'バックアップと書き出し。いまはこの端末のブラウザに保存しています。');
+
+    /* ---- 接続 ---- */
+    h += '<div class="card" style="margin-bottom:1.5rem">' +
+      '<div class="row-between" style="margin-bottom:.9rem">' +
+      '<h3 class="ttl-s">本番のデータ置き場（Firebase）</h3>' +
+      (cloud ? '<span class="tag tag-ok">つながっています</span>'
+             : '<span class="tag tag-dim">つないでいません</span>') + '</div>';
+    if (cloud) {
+      h += '<table class="tbl" style="margin-bottom:1rem"><tbody>' +
+        '<tr><th style="width:12em">プロジェクトID</th><td class="mono">' + esc(cfg.projectId) + '</td></tr>' +
+        '<tr><th>ログイン中</th><td class="mono">' + esc((EZ.cloud.currentUser() || {}).email || '—') + '</td></tr>' +
+        '</tbody></table>' +
+        '<div class="row">' +
+        '<button class="btn btn-ghost btn-s" id="c-seed">講座・教材・文言を書き込む</button>' +
+        '<button class="btn btn-danger btn-s" id="c-off">接続を解除する</button></div>' +
+        '<p class="small muted" style="margin-top:.8rem">' +
+        '「書き込む」は、いま画面に入っている講座7回・教材・公開レポート・規約の文言を Firestore に入れ直します。' +
+        '最初の1回だけ押してください。会員のデータには触りません。</p>';
+    } else {
+      h += '<p class="small muted" style="margin-bottom:1rem">' +
+        'Firebase コンソールで取得した設定を貼り付けると、本番のデータ置き場につながります。' +
+        '手順は <span class="mono">セットアップ手順.md</span> にあります。</p>' +
+        '<label class="field"><span class="lbl">Firebase の設定（firebaseConfig の中身をそのまま貼り付け）</span>' +
+        '<textarea id="c-cfg" style="min-height:9rem;font-family:var(--font-en);font-size:.8rem" ' +
+        'placeholder=\'{ "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }\'></textarea></label>' +
+        '<button class="btn btn-fill btn-s" id="c-on">つなぐ</button>' +
+        '<p class="small muted" style="margin-top:.8rem">' +
+        'この設定は秘密の情報ではありません（公開しても問題ないもので、守りは Firestore のルールで行います）。</p>';
+    }
+    h += '</div>';
     h += '<div class="card" style="margin-bottom:24px">' +
       '<h3 class="ttl-s" style="margin-bottom:12px">書き出し</h3>' +
       '<div class="row"><button class="btn btn-ghost btn-s" id="d-members">会員一覧をCSV</button>' +
       '<button class="btn btn-ghost btn-s" id="d-pay">決済履歴をCSV</button>' +
       '<button class="btn btn-ghost btn-s" id="d-all">全データをJSON（バックアップ）</button></div></div>';
+    if (cloud) return h;
     h += '<div class="card" style="margin-bottom:24px">' +
       '<h3 class="ttl-s" style="margin-bottom:12px">読み込み</h3>' +
       '<p class="small muted" style="margin-bottom:14px">バックアップしたJSONを戻します。いまのデータは上書きされます。</p>' +
@@ -670,6 +754,63 @@
   }
 
   function bindData() {
+    var on = $('#c-on');
+    if (on) on.addEventListener('click', function () {
+      var raw = $('#c-cfg').value.trim();
+      if (!raw) return U.toast('設定を貼り付けてください');
+      var cfg;
+      try {
+        /* firebaseConfig = {...} の形で貼られても読めるようにする */
+        var body = raw.replace(/^[\s\S]*?=\s*/, '').replace(/;\s*$/, '');
+        cfg = JSON.parse(body.replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":').replace(/'/g, '"'));
+      } catch (e) { return U.toast('設定を読み取れませんでした。{ } ごと貼り付けてください', 'alert'); }
+      if (!cfg.apiKey || !cfg.projectId) return U.toast('apiKey と projectId が見あたりません', 'alert');
+      EZ.cloud.setConfig(cfg);
+      U.toast('つなぎました。読み込み直します…');
+      setTimeout(function () { location.reload(); }, 900);
+    });
+
+    var off = $('#c-off');
+    if (off) off.addEventListener('click', function () {
+      U.confirmBox('接続を解除しますか',
+        'この端末のブラウザから接続設定を消します。\nFirebase 側のデータは消えません。',
+        '解除する').then(function (ok) {
+          if (!ok) return;
+          EZ.cloud.setConfig(null);
+          location.reload();
+        });
+    });
+
+    var seed = $('#c-seed');
+    if (seed) seed.addEventListener('click', function () {
+      U.confirmBox('書き込みますか',
+        '講座7回・教材・公開レポート・規約の文言・料金設定を Firestore に入れ直します。\n会員のデータには触りません。',
+        '書き込む').then(function (ok) {
+          if (!ok) return;
+          seed.disabled = true; seed.textContent = '書き込んでいます…';
+          var base = EZ.buildSeed(Date.now());
+          var d = S.read();
+          S.put('settings', Object.assign({}, base.settings, d.settings || {}));
+          S.put('legal', d.legal && d.legal.terms ? d.legal : base.legal);
+          S.put('story', d.story && d.story.paragraphs ? d.story : base.story);
+          S.put('guide', d.guide || base.guide);
+          (d.lessons && d.lessons.length ? d.lessons : base.lessons).forEach(function (l) { S.put('lessons', l); });
+          (d.materials && d.materials.length ? d.materials : base.materials).forEach(function (m) { S.put('materials', m); });
+          (d.publicReports && d.publicReports.length ? d.publicReports : base.publicReports).forEach(function (r) { S.put('publicReports', r); });
+          (d.coupons && d.coupons.length ? d.coupons : base.coupons).forEach(function (c) { S.put('coupons', c); });
+          S.flush().then(function () {
+            seed.disabled = false; seed.textContent = '講座・教材・文言を書き込む';
+            U.toast('書き込みました');
+          });
+        });
+    });
+
+    if (S.mode() === 'cloud') return bindExports();
+    bindExports();
+    bindDemoButtons();
+  }
+
+  function bindExports() {
     $('#d-members').addEventListener('click', function () {
       var now = S.clock.now();
       var rows = [['氏名', 'メール', '入会日', '状態', '請求期間の終わり', '講座提出数', 'レポート本数', 'クーポン', 'LINE']];
@@ -691,6 +832,9 @@
     $('#d-all').addEventListener('click', function () {
       U.download('エビデンスゼミ-backup.json', S.exportJSON(), 'application/json');
     });
+  }
+
+  function bindDemoButtons() {
     $('#d-import').addEventListener('change', function () {
       var f = this.files[0]; if (!f) return;
       var fr = new FileReader();
@@ -736,14 +880,14 @@
   function bindHome() {
     var b = $('#mark-all');
     if (b) b.addEventListener('click', function () {
-      S.update(function (d) { d.adminInbox.forEach(function (i) { i.read = true; }); });
+      S.update(function (d) { d.adminInbox.forEach(function (i) { if (!i.read) { i.read = true; S.put('adminInbox', i); } }); });
       rerender();
     });
     $$('[data-inbox]').forEach(function (el) {
       el.addEventListener('click', function () {
         S.update(function (d) {
           var i = d.adminInbox.filter(function (x) { return x.id === el.dataset.inbox; })[0];
-          if (i) i.read = true;
+          if (i && !i.read) { i.read = true; S.put('adminInbox', i); }
         });
         el.classList.remove('unread');
       });
@@ -770,6 +914,8 @@
   }
 
   function bindCommon() {
+    var lo = $('#adminLogout');
+    if (lo) lo.addEventListener('click', function (e) { e.preventDefault(); EZ.cloud.stop(); EZ.cloud.signOut(); });
     var mb = $('#menuBtn');
     if (mb) mb.addEventListener('click', function () { $('#side').classList.toggle('open'); });
     $$('.side a.nav').forEach(function (a) {
@@ -785,11 +931,50 @@
     rerender();
   }
 
+  var signedIn = false;
   window.addEventListener('hashchange', function () {
     var p = location.hash.replace(/^#/, '') || 'home';
-    if (VIEWS[p] && sessionStorage.getItem(PASS_KEY) === '1') { page = p; rerender(); }
+    var allowed = S.mode() === 'cloud' ? signedIn : sessionStorage.getItem(PASS_KEY) === '1';
+    if (VIEWS[p] && allowed) { page = p; rerender(); }
   });
 
-  boot();
-  U.devbar(function () { boot(); });
+  /* ---------- 本番（Firebase）の起動 ---------- */
+  function onCloudReady() {
+    db = S.read();
+    page = location.hash.replace(/^#/, '') || 'home';
+    if (!VIEWS[page]) page = 'home';
+    rerender();
+  }
+
+  async function bootCloud() {
+    loading('接続しています…');
+    try { await EZ.cloud.init(); }
+    catch (e) {
+      console.error(e);
+      S.forceLocal();
+      U.toast('本番につながらないため、体験版で開いています', 'alert');
+      boot(); return;
+    }
+    EZ.cloud.watchAuth(async function (user) {
+      if (!user) { EZ.cloud.stop(); signedIn = false; db = S.read(); renderCloudGate(); return; }
+      loading('権限を確認しています…');
+      var ok = await EZ.cloud.isAdmin(user.uid);
+      if (!ok) {
+        signedIn = false;
+        await EZ.cloud.signOut();
+        renderCloudGate('この画面を開ける権限がありません。管理者として登録されているか確認してください。');
+        return;
+      }
+      signedIn = true;
+      loading('読み込んでいます…');
+      S.attachCloud('admin', user.uid, onCloudReady);
+    });
+  }
+
+  if (S.mode() === 'cloud') {
+    bootCloud();
+  } else {
+    boot();
+    U.devbar(function () { boot(); });
+  }
 })();

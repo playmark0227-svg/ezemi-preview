@@ -69,14 +69,16 @@
 
   /* ================= 通知（C-2 メール→LINEの二段） ================= */
   function pushNotify(db, channel, member, subject, body, meta) {
-    db.notifications.unshift({
+    var n = {
       id: S.uid('n'), channel: channel,
       to: member ? member.email : '(全員)',
       memberId: member ? member.id : null,
       memberName: member ? member.name : '会員全員',
       subject: subject, body: body,
       at: S.clock.now(), meta: meta || null
-    });
+    };
+    db.notifications.unshift(n);
+    S.put('notifications', n);
     if (db.notifications.length > 400) db.notifications.length = 400;
   }
   function notifyMember(db, member, subject, body) {
@@ -84,7 +86,9 @@
     if (member.lineLinked) pushNotify(db, 'line', member, subject, body);
   }
   function notifyAdmin(db, title, body, meta) {
-    db.adminInbox.unshift({ id: S.uid('i'), title: title, body: body, at: S.clock.now(), read: false, meta: meta || null });
+    var i = { id: S.uid('i'), title: title, body: body, at: S.clock.now(), read: false, meta: meta || null };
+    db.adminInbox.unshift(i);
+    S.put('adminInbox', i);
   }
 
   /* ================= 会員資格（A-6） ================= */
@@ -101,10 +105,20 @@
     };
   }
 
+  /* 会員資格は「保存された状態」ではなく「いま計算した結果」。
+     こうしておくと、期限切れを書き込みで反映する必要がなくなり、
+     定期実行のサーバ処理なしでも遮断が正しく効く。 */
   function statusOf(member, now) {
     var b = member.billing;
+    now = now || S.clock.now();
     if (b.state === 'suspended') return { code: 'suspended', label: '閲覧停止', tone: 'alert', canView: false };
     if (b.state === 'expired') return { code: 'expired', label: '終了', tone: 'dim', canView: false };
+
+    /* 期限を過ぎていれば、状態が active のままでも終了として扱う */
+    var unlimited = !b.periodEnd;
+    if (!unlimited && now > b.periodEnd && b.state !== 'past_due') {
+      return { code: 'expired', label: '終了', tone: 'dim', canView: false };
+    }
     if (b.state === 'past_due') return { code: 'past_due', label: '支払い確認中', tone: 'warn', canView: true };
     if (b.cancelRequestedAt) return { code: 'canceling', label: '解約予定', tone: 'warn', canView: true };
     if (b.freeMonths > 0) return { code: 'free', label: '無料期間中', tone: 'sea', canView: true };
@@ -117,12 +131,14 @@
      入る日を基準に毎月同日（動画 49:52〜 のとおりアニバーサリー課金）。 */
   function charge(db, member, kind, amount, now) {
     var ok = !(member.billing.forceFail);
-    db.payments.unshift({
+    var p = {
       id: S.uid('p'), memberId: member.id, memberName: member.name,
       kind: kind, amount: amount, at: now,
       status: ok ? 'paid' : 'failed',
       method: 'card'
-    });
+    };
+    db.payments.unshift(p);
+    S.put('payments', p);
     return ok;
   }
 
@@ -150,6 +166,9 @@
 
   /* ================= 自動処理エンジン（画面を開くたびに走る） ================= */
   function refresh() {
+    /* 決済の巻き戻し・リトライ・遮断を再現するのは体験版だけ。
+       本番では毎月の課金と督促は Stripe が持ち、こちらは結果を受け取るだけになる。 */
+    if (S.mode && S.mode() === 'cloud') return 0;
     return S.update(function (db) {
       var now = S.clock.now(), st = db.settings, changed = 0;
 
@@ -232,16 +251,17 @@
     return S.update(function (db) {
       var now = S.clock.now(), st = db.settings;
       var dup = db.members.filter(function (m) { return m.email.toLowerCase() === input.email.toLowerCase(); })[0];
-      if (dup) throw new Error('このメールアドレスはすでに登録されています');
+      if (dup && !input.uid) throw new Error('このメールアドレスはすでに登録されています');
 
       var c = findCoupon(db, input.coupon);
       if (input.coupon && !c) throw new Error('クーポンコードが見つからないか、上限に達しています');
 
       var m = {
-        id: S.uid('mem'),
+        /* 本番では Firebase Authentication の uid をそのまま会員IDにする。
+           体験版のときだけ自前で採番する。 */
+        id: input.uid || S.uid('mem'),
         name: input.name,
         email: input.email,
-        password: input.password,     /* デモ用の平文。本番は Firebase Auth に置き換える */
         joinedAt: now,
         coupon: c ? c.code : null,
         lineLinked: !!input.lineLinked,
@@ -250,24 +270,39 @@
         flags: { impressionPrompted: false, impressionDone: false, guideDeliveredAt: null },
         note: ''
       };
+      /* パスワードを持つのは体験版だけ。本番は Authentication 側にある */
+      if (!input.uid) m.password = input.password;
+
+      function freeLine(kind) {
+        var p = { id: S.uid('p'), memberId: m.id, memberName: m.name, kind: kind, amount: 0, at: now, status: 'free', method: '—' };
+        db.payments.unshift(p);
+        S.put('payments', p);
+      }
 
       var initial = (c && c.waiveInitial) ? 0 : st.priceInitial;
-      if (initial > 0) {
-        if (!charge(db, m, 'initial', initial, now)) throw new Error('決済に失敗しました');
+      if (input.skipPayment) {
+        /* 決済をつなぐ前の期間。金額のやりとりは記録だけ残して素通しする */
+        freeLine('initial');
+        if (m.billing.freeMonths > 0) m.billing.freeMonths--;
+        freeLine('monthly');
       } else {
-        db.payments.unshift({ id: S.uid('p'), memberId: m.id, memberName: m.name, kind: 'initial', amount: 0, at: now, status: 'free', method: '—' });
+        if (initial > 0) {
+          if (!charge(db, m, 'initial', initial, now)) throw new Error('決済に失敗しました');
+        } else {
+          freeLine('initial');
+        }
+        if (m.billing.freeMonths > 0) {
+          m.billing.freeMonths--;
+          freeLine('monthly');
+        } else {
+          if (!charge(db, m, 'monthly', st.priceMonthly, now)) throw new Error('決済に失敗しました');
+        }
       }
       m.billing.initialPaid = true;
 
-      if (m.billing.freeMonths > 0) {
-        m.billing.freeMonths--;
-        db.payments.unshift({ id: S.uid('p'), memberId: m.id, memberName: m.name, kind: 'monthly', amount: 0, at: now, status: 'free', method: '—' });
-      } else {
-        if (!charge(db, m, 'monthly', st.priceMonthly, now)) throw new Error('決済に失敗しました');
-      }
-
-      if (c) { c.used++; }
+      if (c) { c.used++; S.put('coupons', c); }
       db.members.push(m);
+      S.put('members', m);
 
       notifyMember(db, m, 'ご入会ありがとうございます', 'すぐに第1回をご覧いただけます。第1回の課題を出すと、第2回が自動で開きます。');
       notifyAdmin(db, '新しい入会', m.name + ' さんが入会しました' + (c ? '（' + c.label + '）' : ''), { memberId: m.id });
@@ -311,7 +346,7 @@
     return S.update(function (db) {
       var m = db.members.filter(function (x) { return x.id === memberId; })[0];
       if (!m) return;
-      if (!m.progress.watched[no]) m.progress.watched[no] = S.clock.now();
+      if (!m.progress.watched[no]) { m.progress.watched[no] = S.clock.now(); S.put('members', m); }
       return m;
     });
   }
@@ -328,7 +363,9 @@
       if (no > 1 && !db.assignments.some(function (a) { return a.memberId === memberId && a.lesson === no - 1; }))
         throw new Error('前の回の課題がまだ提出されていません');
 
-      db.assignments.unshift({ id: S.uid('a'), memberId: memberId, memberName: m.name, lesson: no, body: body, submittedAt: now });
+      var a = { id: memberId + '_' + no, memberId: memberId, memberName: m.name, lesson: no, body: body, submittedAt: now };
+      db.assignments.unshift(a);
+      S.put('assignments', a);
 
       var result = { unlockedNext: null, guide: false, askImpression: false };
       var last = db.lessons.length;
@@ -341,6 +378,7 @@
       /* B-6 第7回フルレポート提出 → 合流ガイド自動配布＋代表へ通知 */
       if (no === last) {
         m.flags.guideDeliveredAt = now;
+        S.put('members', m);
         result.guide = true;
         notifyMember(db, m, '「合流ガイド」をお渡ししました', '会員ページの教材ダウンロードから受け取れます。個別の添削はこのあとご案内します。');
         notifyAdmin(db, '第7回フルレポートの提出', m.name + ' さんがフルレポートを提出しました。個別添削の対象です。', { memberId: m.id, assignmentLesson: no });
@@ -354,7 +392,7 @@
   function markImpressionPrompted(memberId) {
     return S.update(function (db) {
       var m = db.members.filter(function (x) { return x.id === memberId; })[0];
-      if (m) m.flags.impressionPrompted = true;
+      if (m) { m.flags.impressionPrompted = true; S.put('members', m); }
     });
   }
   function submitImpression(memberId, text) {
@@ -363,7 +401,10 @@
       if (!m) return;
       m.flags.impressionPrompted = true;
       m.flags.impressionDone = true;
-      db.impressions.unshift({ id: S.uid('imp'), memberId: memberId, memberName: m.name, text: text, at: S.clock.now() });
+      S.put('members', m);
+      var imp = { id: S.uid('imp'), memberId: memberId, memberName: m.name, text: text, at: S.clock.now() };
+      db.impressions.unshift(imp);
+      S.put('impressions', imp);
       notifyAdmin(db, '感想が届きました', m.name + ' さんから感想が届きました。', { memberId: memberId });
     });
   }
@@ -378,12 +419,14 @@
       var wk = weekKey(now);
       var dup = db.reports.filter(function (r) { return r.memberId === memberId && r.weekKey === wk; })[0];
       if (dup) throw new Error('今週分はすでに提出済みです（差し替えたい場合は事務局までご連絡ください）');
-      db.reports.unshift({
-        id: S.uid('rep'), memberId: memberId, memberName: m.name, weekKey: wk,
+      var r = {
+        id: memberId + '_' + wk, memberId: memberId, memberName: m.name, weekKey: wk,
         title: input.title || '', body: input.body, fileName: input.fileName || '',
         consent: !!input.consent, consentAt: input.consent ? now : null,
         submittedAt: now
-      });
+      };
+      db.reports.unshift(r);
+      S.put('reports', r);
       notifyAdmin(db, '週1レポートの提出', m.name + ' さん（' + wk + '）' + (input.consent ? '／配信での紹介 許諾あり' : ''), { memberId: memberId });
       return wk;
     });
@@ -402,7 +445,9 @@
       var now = S.clock.now();
       var m = db.members.filter(function (x) { return x.id === memberId; })[0];
       if (!m) throw new Error('会員が見つかりません');
-      db.questions.unshift({ id: S.uid('q'), memberId: memberId, memberName: m.name, body: body, at: now, answeredPostId: null });
+      var q = { id: S.uid('q'), memberId: memberId, memberName: m.name, body: body, at: now, answeredPostId: null };
+      db.questions.unshift(q);
+      S.put('questions', q);
       notifyAdmin(db, '質問が届きました', m.name + ' さんから質問が届きました。', { memberId: memberId });
     });
   }
@@ -427,9 +472,10 @@
         answersQuestionId: input.answersQuestionId || null
       };
       db.posts.unshift(p);
+      S.put('posts', p);
       if (p.answersQuestionId) {
         var q = db.questions.filter(function (x) { return x.id === p.answersQuestionId; })[0];
-        if (q) q.answeredPostId = p.id;
+        if (q) { q.answeredPostId = p.id; S.put('questions', q); }
       }
       return p;
     });
@@ -457,6 +503,7 @@
       var m = db.members.filter(function (x) { return x.id === memberId; })[0];
       if (!m) throw new Error('会員が見つかりません');
       m.billing.cancelRequestedAt = now;
+      S.put('members', m);
       notifyMember(db, m, '解約を受け付けました', fmtDate(m.billing.periodEnd) + ' までは今までどおりご覧いただけます。以降は自動で終了します。手続きは以上です。');
       notifyAdmin(db, '自己解約', m.name + ' さんが解約しました（' + fmtDate(m.billing.periodEnd) + ' まで閲覧可）', { memberId: m.id });
       return m.billing.periodEnd;
@@ -467,6 +514,7 @@
       var m = db.members.filter(function (x) { return x.id === memberId; })[0];
       if (!m) return;
       m.billing.cancelRequestedAt = null;
+      S.put('members', m);
       notifyMember(db, m, '解約を取り消しました', '引き続きご利用いただけます。');
     });
   }
@@ -476,6 +524,7 @@
       if (!m) return;
       m.billing.state = 'expired';
       m.billing.cancelRequestedAt = S.clock.now();
+      S.put('members', m);
       notifyMember(db, m, '会員資格の終了について', reason || '運営判断により会員資格を終了しました。');
       notifyAdmin(db, '強制解約', m.name + ' さんを強制解約しました。' + (reason || ''), { memberId: m.id });
     });
@@ -487,6 +536,7 @@
       p.status = 'refunded';
       p.refundedAt = S.clock.now();
       p.refundReason = reason || '';
+      S.put('payments', p);
       var m = db.members.filter(function (x) { return x.id === p.memberId; })[0];
       if (m) notifyMember(db, m, '返金の手続きをしました', fmtYen(p.amount) + ' を返金しました。カード会社の処理により反映まで数日かかることがあります。');
       notifyAdmin(db, '返金', (p.memberName || '') + ' / ' + fmtYen(p.amount), { paymentId: paymentId });
@@ -498,6 +548,7 @@
       if (!m) return;
       m.billing.forceFail = false;
       m.billing.nextRetryAt = S.clock.now();
+      S.put('members', m);
     });
   }
 

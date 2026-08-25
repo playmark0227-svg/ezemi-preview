@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>本番つなぎの自動テスト</title>
+<style>
+body{font-family:ui-monospace,monospace;background:#0a1c2e;color:#cfe8f1;padding:24px;line-height:1.7;font-size:13px}
+h1{font-size:15px;color:#c9a86a;margin:0 0 16px}
+.ok{color:#7fd6a5}.ng{color:#ff9d85}.n{color:#9fb3c2}
+pre{white-space:pre-wrap;margin:0}
+</style>
+</head>
+<body>
+<h1>エビデンスゼミ ― 本番つなぎ（Firebase）の自動テスト</h1>
+<pre id="out">実行中…</pre>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/cloud.js"></script>
+<script src="fake-cloud.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/domain.js"></script>
+<script src="../assets/js/ui.js"></script>
+<script>
+(function () {
+  var lines = [], pass = 0, fail = 0;
+  function log(s, cls) { lines.push('<span class="' + (cls || 'n') + '">' + s + '</span>'); render(); }
+  function ok(name, cond, extra) {
+    if (cond) { pass++; log('  ✓ ' + name, 'ok'); }
+    else { fail++; log('  ✗ ' + name + (extra ? '  → ' + extra : ''), 'ng'); }
+  }
+  function head(s) { log(''); log(s, 'n'); }
+  function render() { document.getElementById('out').innerHTML = lines.join('\n'); }
+
+  var S = EZ.store, R = EZ.rules, C = EZ.cloud;
+
+  async function run() {
+    C._wipe();
+    head('■ 起動');
+    ok('本番モードになっている', S.mode() === 'cloud', S.mode());
+    ok('デモデータは入らない', S.read().members.length === 0);
+    ok('Firestore が空でも講座7回は出る', S.read().lessons.length === 7, S.read().lessons.length);
+    ok('Firestore が空でもクーポンは生きている', !!R.findCoupon(S.read(), 'MONITOR'));
+
+    head('■ 入会（Authentication → 会員登録）');
+    var user = await C.signUp('member@example.com', 'password123', '会員 一郎');
+    ok('アカウントが作られた', !!user.uid, user.uid);
+    S.attachCloud('member', user.uid, function () {});
+    await new Promise(function (r) { setTimeout(r, 200); });
+
+    var mem;
+    try {
+      mem = R.signup({ uid: user.uid, name: '会員 一郎', email: 'member@example.com',
+                       coupon: 'MONITOR', lineLinked: true, skipPayment: true });
+    } catch (e) { ok('会員登録できた', false, e.message); }
+    await S.flush();
+    ok('会員IDが Authentication の uid と同じ', mem && mem.id === user.uid);
+    ok('パスワードは保存していない', mem && mem.password === undefined);
+    ok('Firestore に会員が書かれた', !!C._docs()['members/' + user.uid]);
+    ok('入会金・初月とも0円で記録', S.read().payments.filter(function (p) { return p.amount === 0; }).length === 2);
+    ok('会員資格がある', R.canView(mem, S.clock.now()));
+
+    head('■ 講座の解錠（仕様書 B-2 / B-3）');
+    var st = R.lessonStates(S.read(), mem, S.clock.now());
+    ok('第1回だけ開いている', st[0].unlocked && !st[1].unlocked);
+    var res = R.submitAssignment(mem.id, 1, 'テストの提出です。一次情報まで遡りました。');
+    await S.flush();
+    ok('提出すると第2回が開く', res.unlockedNext === 2);
+    st = R.lessonStates(S.read(), mem, S.clock.now());
+    ok('第2回が開き、第3回はまだ閉じている', st[1].unlocked && !st[2].unlocked);
+    ok('課題のIDが uid_回 になっている', !!C._docs()['assignments/' + user.uid + '_1'],
+       Object.keys(C._docs()).filter(function (k) { return k.indexOf('assignments/') === 0; }).join(','));
+    var dup = false;
+    try { R.submitAssignment(mem.id, 1, 'ふたたび'); } catch (e) { dup = true; }
+    ok('同じ回は二重に出せない', dup);
+
+    head('■ 週1レポート（D-1 / D-2）');
+    R.submitReport(mem.id, { title: 'テスト', body: 'これはテストのレポートです。主張・根拠・限界に分けました。', consent: true });
+    await S.flush();
+    var wk = R.weekKey(S.clock.now());
+    ok('レポートのIDが uid_週 になっている', !!C._docs()['reports/' + user.uid + '_' + wk]);
+    ok('紹介の許諾が記録された', S.read().reports[0].consent === true && !!S.read().reports[0].consentAt);
+    var dupR = false;
+    try { R.submitReport(mem.id, { body: '同じ週にもう1本' }); } catch (e) { dupR = true; }
+    ok('同じ週に二重に出せない', dupR);
+
+    head('■ 配信の掲載期間（C-3 / C-4）');
+    var now = S.clock.now(), DAY = EZ.DAY;
+    R.createPost({ kind: '配信', title: '今日の配信', body: 'ほんぶん', publishAt: now - 1000 });
+    R.createPost({ kind: '配信', title: '40日前の配信', body: 'ほんぶん', publishAt: now - 40 * DAY });
+    R.createPost({ kind: '配信', title: '殿堂入り', body: 'ほんぶん', publishAt: now - 40 * DAY, permanent: true });
+    R.createPost({ kind: '配信', title: '来週の予約', body: 'ほんぶん', publishAt: now + 7 * DAY });
+    await S.flush();
+    var vis = R.visiblePosts(S.read(), now).map(function (p) { return p.title; });
+    ok('今日の配信は読める', vis.indexOf('今日の配信') >= 0);
+    ok('40日前は自動で読めない', vis.indexOf('40日前の配信') < 0);
+    ok('殿堂入りは残る', vis.indexOf('殿堂入り') >= 0);
+    ok('予約投稿はまだ出ない', vis.indexOf('来週の予約') < 0);
+
+    head('■ 会員資格の判定（A-4 / A-6・その場で計算する）');
+    var m2 = JSON.parse(JSON.stringify(mem));
+    m2.billing.periodEnd = now - DAY;
+    ok('期限を過ぎたら state が active でも終了扱い', !R.canView(m2, now), R.statusOf(m2, now).label);
+    m2.billing.periodEnd = now + 5 * DAY;
+    m2.billing.cancelRequestedAt = now;
+    ok('解約しても期限までは読める', R.canView(m2, now) && R.statusOf(m2, now).code === 'canceling');
+    m2.billing.state = 'suspended';
+    ok('停止中は読めない', !R.canView(m2, now));
+    ok('本番では時計を動かせない', S.clock.offset() === 0);
+
+    head('■ 管理者');
+    var admin = await C.signUp('admin@example.com', 'password123', '管理者');
+    ok('管理者は最初は権限なし', !(await C.isAdmin(admin.uid)));
+    C._makeAdmin(admin.uid);
+    ok('admins に登録すると権限がつく', await C.isAdmin(admin.uid));
+
+    head('■ 通知');
+    var inbox = Object.keys(C._docs()).filter(function (k) { return k.indexOf('adminInbox/') === 0; });
+    ok('入会と提出が事務局に届いている', inbox.length >= 3, inbox.length + '件');
+
+    log('');
+    log('────────────────────────────');
+    log((fail === 0 ? '✓ ぜんぶ通りました' : '✗ ' + fail + '件 失敗') + '（' + pass + ' / ' + (pass + fail) + '）',
+        fail === 0 ? 'ok' : 'ng');
+    document.title = (fail === 0 ? 'PASS ' : 'FAIL ') + pass + '/' + (pass + fail);
+  }
+
+  run().catch(function (e) {
+    log('');
+    log('✗ 途中で止まりました：' + (e && (e.stack || e.message) || e), 'ng');
+    document.title = 'ERROR';
+  });
+})();
+</script>
+</body>
+</html>

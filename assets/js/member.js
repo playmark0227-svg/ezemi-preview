@@ -7,21 +7,85 @@
   var esc = U.esc, nl2br = U.nl2br, $ = U.$, $$ = U.$$;
   var db, me, page = 'home';
 
-  EZ.demo.ensure();
+  if (S.mode() !== 'cloud') EZ.demo.ensure();
   function load() { R.refresh(); db = S.read(); }
 
   function currentMember() {
+    /* 本番はログイン中の uid、体験版はこのブラウザに持たせた印で引く。
+       ここを分けないと、再描画のたびに本番のログインが外れる。 */
+    if (S.mode() === 'cloud') {
+      if (!cloudUid) return null;
+      return db.members.filter(function (m) { return m.id === cloudUid; })[0] || null;
+    }
     var s = S.session.get();
     if (!s || !s.memberId) return null;
     return db.members.filter(function (m) { return m.id === s.memberId; })[0] || null;
   }
 
   /* ================= ログイン ================= */
+  function loading(msg) {
+    $('#root').innerHTML =
+      '<div class="login-wrap"><div class="login-box center">' +
+      '<p class="small muted">' + esc(msg || '読み込んでいます…') + '</p></div></div>';
+  }
+
+  function brandBlock(sub) {
+    return '<a class="brand" href="index.html">' +
+      '<picture><source srcset="assets/img/logo-full.webp" type="image/webp">' +
+      '<img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
+      '<span class="brand__sub">' + esc(db.settings.siteName) + '<small>' + esc(sub) + '</small></span></a>';
+  }
+
+  /* 本番（Firebase Authentication）のログイン画面 */
+  function renderCloudLogin(msg) {
+    $('#root').innerHTML =
+      '<div class="login-wrap"><div class="login-box">' + brandBlock('会員ページ') +
+      '<div class="card">' +
+      (msg ? '<p class="small" style="color:var(--coral-ink);margin-bottom:1rem">' + esc(msg) + '</p>' : '') +
+      '<label class="field"><span class="lbl">メールアドレス</span><input type="email" id="l-email" autocomplete="username"></label>' +
+      '<label class="field"><span class="lbl">パスワード</span><input type="password" id="l-pass" autocomplete="current-password"></label>' +
+      '<button class="btn btn-fill" id="l-go" style="width:100%">ログイン</button>' +
+      '<p class="small muted center" style="margin-top:1rem">' +
+      '<a href="#" id="l-forgot">パスワードを忘れたとき</a></p>' +
+      '</div>' +
+      '<p class="center small muted" style="margin-top:1.4rem">' +
+      'まだ入会していない方は <a href="index.html#/join">こちら</a></p>' +
+      '</div></div>';
+
+    $('#l-go').addEventListener('click', doCloudLogin);
+    $('#l-pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') doCloudLogin(); });
+    $('#l-forgot').addEventListener('click', function (e) {
+      e.preventDefault();
+      var em = $('#l-email').value.trim();
+      if (!em) return U.toast('先にメールアドレスを入れてください');
+      EZ.cloud.resetPassword(em)
+        .then(function () { U.toast('再設定のメールを送りました'); })
+        .catch(function (err) { U.toast(authMsg(err), 'alert'); });
+    });
+  }
+
+  function authMsg(err) {
+    var c = (err && err.code) || '';
+    if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found')
+      return 'メールアドレスかパスワードが違います';
+    if (c === 'auth/too-many-requests') return '試行が続いたため、しばらく待ってからお試しください';
+    if (c === 'auth/invalid-email') return 'メールアドレスの形式が正しくありません';
+    if (c === 'auth/network-request-failed') return 'ネットワークにつながりませんでした';
+    return (err && err.message) || 'うまくいきませんでした';
+  }
+
+  function doCloudLogin() {
+    var email = $('#l-email').value.trim(), pass = $('#l-pass').value;
+    if (!email || !pass) return U.toast('メールアドレスとパスワードを入れてください');
+    loading('ログインしています…');
+    EZ.cloud.signIn(email, pass).catch(function (err) { renderCloudLogin(authMsg(err)); });
+  }
+
   function renderLogin(msg) {
+    if (S.mode() === 'cloud') return renderCloudLogin(msg);
     var demoList = db.members.slice(0, 6);
     $('#root').innerHTML =
-      '<div class="login-wrap"><div class="login-box">' +
-      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>会員ページ</small></span></a>' +
+      '<div class="login-wrap"><div class="login-box">' + brandBlock('会員ページ') +
       '<div class="card">' +
       (msg ? '<p class="small" style="color:var(--coral);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
       '<label class="field"><span class="lbl">メールアドレス</span><input type="email" id="l-email" autocomplete="username"></label>' +
@@ -133,16 +197,16 @@
     h += '<div class="todo-item' + (nextLesson ? '' : ' done') + '"><div class="mk">' + (nextLesson ? '' : '✓') + '</div><div class="tx">' +
       '<h4>' + (nextLesson ? '第' + nextLesson.lesson.no + '回「' + esc(nextLesson.lesson.title) + '」を見て、課題を出す' : '入門講座 7回はすべて提出済みです') + '</h4>' +
       '<p>' + (nextLesson ? '課題を出すと、その場で次の回が開きます。' : 'お疲れさまでした。あとは配信と週1レポートを続けてください。') + '</p></div>' +
-      (nextLesson ? '<a class="btn btn-s" href="#lessons">開く</a>' : '') + '</div>';
+      (nextLesson ? '<a class="btn btn-ghost btn-s" href="#lessons">開く</a>' : '') + '</div>';
 
     h += '<div class="todo-item' + (thisWeekReport ? ' done' : '') + '"><div class="mk">' + (thisWeekReport ? '✓' : '') + '</div><div class="tx">' +
       '<h4>今週のレポートを出す</h4><p>' + (thisWeekReport ? R.fmtDate(thisWeekReport.submittedAt) + 'に提出済みです。' : '週に1本。主張・根拠・限界の3つに分けて書きます。') + '</p></div>' +
-      (thisWeekReport ? '' : '<a class="btn btn-s" href="#reports">書く</a>') + '</div>';
+      (thisWeekReport ? '' : '<a class="btn btn-ghost btn-s" href="#reports">書く</a>') + '</div>';
 
     h += '<div class="todo-item' + (newPosts.length ? '' : ' done') + '"><div class="mk">' + (newPosts.length ? '' : '✓') + '</div><div class="tx">' +
       '<h4>' + (newPosts.length ? '新しい配信が' + newPosts.length + '本あります' : '直近1週間の配信は読み終えています') + '</h4>' +
       '<p>配信は公開から' + db.settings.archiveWindowDays + '日で自動的に読めなくなります。</p></div>' +
-      (newPosts.length ? '<a class="btn btn-s" href="#feed">読む</a>' : '') + '</div>';
+      (newPosts.length ? '<a class="btn btn-ghost btn-s" href="#feed">読む</a>' : '') + '</div>';
     h += '</div>';
 
     h += '<div class="stats-app" style="margin-bottom:30px">' +
@@ -553,7 +617,11 @@
   }
 
   function bindCommon() {
-    $('#logout').addEventListener('click', function (e) { e.preventDefault(); S.session.clear(); boot(); });
+    $('#logout').addEventListener('click', function (e) {
+      e.preventDefault();
+      if (S.mode() === 'cloud') { EZ.cloud.stop(); EZ.cloud.signOut(); return; }
+      S.session.clear(); boot();
+    });
     var mb = $('#menuBtn');
     if (mb) mb.addEventListener('click', function () { $('#side').classList.toggle('open'); });
     $$('.side a.nav').forEach(function (a) {
@@ -575,6 +643,48 @@
     if (VIEWS[p]) { page = p; rerender(); }
   });
 
-  boot();
-  U.devbar(function () { boot(); });
+  /* ---------- 本番（Firebase）の起動 ---------- */
+  var cloudUid = null;
+
+  function onCloudReady() {
+    db = S.read();
+    me = db.members.filter(function (x) { return x.id === cloudUid; })[0] || null;
+    if (!me) {
+      $('#root').innerHTML =
+        '<div class="login-wrap"><div class="login-box">' + brandBlock('会員ページ') +
+        '<div class="card"><h3 class="ttl-s" style="margin-bottom:.8rem">会員の登録が見つかりません</h3>' +
+        '<p class="small muted" style="margin-bottom:1.2rem">ログインはできましたが、会員としての登録がありません。' +
+        'お手数ですが事務局までご連絡ください。</p>' +
+        '<button class="btn btn-ghost btn-s" id="l-out">ログアウト</button></div></div></div>';
+      $('#l-out').addEventListener('click', function () { EZ.cloud.stop(); EZ.cloud.signOut(); });
+      return;
+    }
+    page = (location.hash.replace(/^#/, '') || 'home');
+    if (!VIEWS[page]) page = 'home';
+    rerender();
+  }
+
+  async function bootCloud() {
+    loading('接続しています…');
+    try { await EZ.cloud.init(); }
+    catch (e) {
+      console.error(e);
+      S.forceLocal();
+      U.toast('本番につながらないため、体験版で開いています', 'alert');
+      boot(); return;
+    }
+    EZ.cloud.watchAuth(function (user) {
+      if (!user) { EZ.cloud.stop(); cloudUid = null; db = S.read(); renderCloudLogin(); return; }
+      cloudUid = user.uid;
+      loading('読み込んでいます…');
+      S.attachCloud('member', user.uid, onCloudReady);
+    });
+  }
+
+  if (S.mode() === 'cloud') {
+    bootCloud();
+  } else {
+    boot();
+    U.devbar(function () { boot(); });
+  }
 })();

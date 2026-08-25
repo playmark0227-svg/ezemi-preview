@@ -1,0 +1,182 @@
+rules_version = '2';
+
+/* =====================================================================
+   エビデンスゼミ 会員システム
+
+   考え方：
+     ・「誰が何を読めるか」は、画面側ではなくここで決める。
+       画面のコードは誰でも読めるので、守りはこの1枚に集約する。
+     ・会員は自分の分だけ。管理者（admins に登録した人）はぜんぶ。
+     ・会員資格（billing）は本人に書かせない。ここを書けてしまうと
+       お金を払わずに閲覧を続けられてしまう。
+     ・課題は「前の回を出していないと出せない」をここでも効かせる。
+       画面側の解錠だけだと、直接書き込まれたときに素通りする。
+   ===================================================================== */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- 共通 ---------- */
+    function signedIn()  { return request.auth != null; }
+    function me()        { return request.auth.uid; }
+    function isAdmin()   { return signedIn() && exists(/databases/$(database)/documents/admins/$(me())); }
+    function member()    { return get(/databases/$(database)/documents/members/$(me())).data; }
+    function hasMember() { return signedIn() && exists(/databases/$(database)/documents/members/$(me())); }
+
+    /* 会員資格があるか。期限切れ・停止はここで落とす */
+    function entitled() {
+      return hasMember()
+        && member().billing.state != 'suspended'
+        && member().billing.state != 'expired'
+        && (member().billing.periodEnd == null
+            || request.time.toMillis() < member().billing.periodEnd);
+    }
+
+    /* 配信の掲載期間（ミリ秒）。設定をまだ書き込んでいなくても止まらないよう既定値を持つ */
+    function windowMs() {
+      return (exists(/databases/$(database)/documents/config/settings)
+        ? get(/databases/$(database)/documents/config/settings).data.archiveWindowDays
+        : 30) * 86400000;
+    }
+
+    /* 変更されたキーが許した範囲に収まっているか */
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    /* ---------- 管理者の名簿 ----------
+       ここへの書き込みは誰にも許さない。Firebase コンソールから手で足す。 */
+    match /admins/{uid} {
+      allow read:  if signedIn() && uid == me();
+      allow write: if false;
+    }
+
+    /* ---------- 公開してよいもの ----------
+       スクール紹介・料金・カリキュラム・公開レポートはログイン前でも読む。 */
+    match /config/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+    match /lessons/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+    match /publicReports/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    /* ---------- 会員限定 ---------- */
+    match /materials/{id} {
+      allow read:  if entitled() || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /coupons/{code} {
+      allow read:  if signedIn();
+      /* 使用回数だけは入会処理で増える。それ以外は管理者のみ */
+      allow update: if isAdmin() || (signedIn() && onlyChanged(['used']));
+      allow create, delete: if isAdmin();
+    }
+
+    /* ---------- 配信 ----------
+       公開時刻より前のもの（予約投稿）と、掲載期間を過ぎたものは読ませない。
+       画面側で隠すだけでは、直接取りにいけば見えてしまう。 */
+    match /posts/{id} {
+      allow read: if isAdmin() || (
+        entitled()
+        && resource.data.publishAt <= request.time.toMillis()
+        && (resource.data.permanent == true
+            || request.time.toMillis() - resource.data.publishAt <= windowMs())
+      );
+      allow write: if isAdmin();
+    }
+
+    /* ---------- 会員 ----------
+       本人が触ってよいのは、名前・LINE通知の可否・視聴済みの記録だけ。
+       billing（会員資格）と flags は本人に書かせない。 */
+    match /members/{uid} {
+      allow read: if isAdmin() || (signedIn() && uid == me());
+
+      allow create: if signedIn() && uid == me()
+                    && request.resource.data.id == me()
+                    && request.resource.data.billing.state == 'active';
+
+      /* flags は「感想の案内を出したか」「合流ガイドを渡したか」の目印で、
+         本人が進めた結果として書き変わる。billing（会員資格）だけは絶対に渡さない。 */
+      allow update: if isAdmin() || (
+        signedIn() && uid == me()
+        && onlyChanged(['name', 'lineLinked', 'progress', 'flags', 'note'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- 課題 ----------
+       ID は「uid_回」に固定。作成のみで、あとから書き換えられない。
+       第2回以降は、前の回を出していないと作れない。 */
+    match /assignments/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.memberId == me());
+
+      allow create: if entitled()
+        && request.resource.data.memberId == me()
+        && id == me() + '_' + string(request.resource.data.lesson)
+        && (
+          request.resource.data.lesson == 1
+          || exists(/databases/$(database)/documents/assignments/$(me() + '_' + string(request.resource.data.lesson - 1)))
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- 週1レポート ----------
+       ID は「uid_週」。同じ週に二重に出せない。出したあとは本人も直せない。 */
+    match /reports/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.memberId == me());
+      allow create: if entitled()
+        && request.resource.data.memberId == me()
+        && id == me() + '_' + request.resource.data.weekKey;
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- 質問・感想 ---------- */
+    match /questions/{id} {
+      allow read:   if isAdmin() || (signedIn() && resource.data.memberId == me());
+      allow create: if entitled() && request.resource.data.memberId == me();
+      allow update, delete: if isAdmin();
+    }
+    match /impressions/{id} {
+      allow read:   if isAdmin() || (signedIn() && resource.data.memberId == me());
+      allow create: if entitled() && request.resource.data.memberId == me();
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- 決済の記録 ----------
+       金額の記録は本人に書かせない。いまは入会時の0円行だけ通す。
+       Stripe をつないだら、ここは管理者のみに閉じる。 */
+    match /payments/{id} {
+      allow read:   if isAdmin() || (signedIn() && resource.data.memberId == me());
+      allow create: if isAdmin() || (
+        signedIn()
+        && request.resource.data.memberId == me()
+        && request.resource.data.amount == 0
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    /* ---------- 事務局側の記録 ----------
+       会員は自分の行動を知らせる書き込みだけできる。読めるのは管理者。 */
+    match /adminInbox/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+    match /notifications/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    /* 上のどれにも当てはまらないものは、すべて拒否 */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
