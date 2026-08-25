@@ -16,10 +16,9 @@
   function renderGate(msg) {
     $('#root').innerHTML =
       '<div class="login-wrap"><div class="login-box">' +
-      '<a class="brand" href="index.html"><span class="bn">' + esc(db.settings.siteName) + '</span>' +
-      '<span class="bs">管理画面</span></a>' +
+      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>管理画面</small></span></a>' +
       '<div class="card">' +
-      (msg ? '<p class="small" style="color:var(--seal);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
+      (msg ? '<p class="small" style="color:var(--coral);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
       '<label class="field"><span class="lbl">管理パスワード</span><input type="password" id="a-pass" autocomplete="current-password"></label>' +
       '<button class="btn btn-fill" id="a-go" style="width:100%">開く</button>' +
       '<p class="small muted" style="margin-top:14px">試作版のパスワードは <span class="mono">ezemi</span> です。本番では別のログインに置き換えます。</p>' +
@@ -61,14 +60,15 @@
 
     return '<div class="app">' +
       '<aside class="side" id="side">' +
-      '<a class="brand" href="index.html"><span class="bn">' + esc(db.settings.siteName) + '</span><span class="bs">管理画面</span></a>' +
+      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>管理画面</small></span></a>' +
       nav +
       '<div class="side-foot"><div class="who">' + esc(db.settings.representative) + '</div>' +
       '<div class="st">' + R.fmtDate(now) + '</div>' +
       '<a href="index.html" style="margin-top:6px;display:inline-block">公開サイトを見る</a></div>' +
       '</aside><div>' +
       '<div class="mobile-head"><button id="menuBtn">メニュー</button>' +
-      '<span style="font-family:var(--serif);letter-spacing:.12em">管理画面</span></div>' +
+      '<picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
+      '<span class="ttl-s">管理画面</span></div>' +
       '<main class="main">' + inner + '</main></div></div>';
   }
 
@@ -88,7 +88,7 @@
 
     var h = pagehead('ホーム', '解錠・催促・遮断・集計は自動で動いています。ここに出てくるのは、人の判断がいるものだけです。');
 
-    h += '<div class="stats" style="margin-bottom:30px">' +
+    h += '<div class="stats-app" style="margin-bottom:30px">' +
       '<div class="stat"><div class="k">閲覧できる会員</div><div class="v">' + active.length + '<small>名</small></div></div>' +
       '<div class="stat"><div class="k">今月の月額合計</div><div class="v" style="font-size:22px">' + R.fmtYen(mrr) + '</div></div>' +
       '<div class="stat"><div class="k">支払いに問題</div><div class="v">' + pastDue.length + '<small>名</small></div></div>' +
@@ -206,7 +206,7 @@
       return '<div class="hist-item"><div class="h">' +
         '<span class="tag">第' + s.lesson.no + '回</span>' +
         (s.submitted ? '<span class="tag tag-ok">提出済み</span>' :
-          s.unlocked ? '<span class="tag tag-indigo">受講中</span>' : '<span class="tag tag-dim">未解錠</span>') +
+          s.unlocked ? '<span class="tag tag-sea">受講中</span>' : '<span class="tag tag-dim">未解錠</span>') +
         (s.submitted ? '<span class="small muted mono">' + R.fmtDateTime(s.submission.submittedAt) + '</span>' : '') +
         '</div>' + (s.submitted ? '<div class="b">' + esc(s.submission.body) + '</div>' : '') + '</div>';
     }).join('');
@@ -219,7 +219,7 @@
     h += '<h4 class="ttl-s bar-ttl" style="margin-top:26px">週1レポート（' + reports.length + '本）</h4>';
     h += reports.length ? reports.map(function (r) {
       return '<div class="hist-item"><div class="h"><span class="tag">' + esc(r.weekKey) + '</span>' +
-        (r.consent ? '<span class="tag tag-seal">紹介 許諾あり</span>' : '') +
+        (r.consent ? '<span class="tag tag-gold">紹介 許諾あり</span>' : '') +
         (r.fileName ? '<span class="tag tag-dim">' + esc(r.fileName) + '</span>' : '') +
         '<span class="small muted mono">' + R.fmtDate(r.submittedAt) + '</span></div>' +
         '<div class="b">' + esc(r.body) + '</div></div>';
@@ -238,7 +238,7 @@
       '<button class="btn btn-ghost btn-s" data-togglefail="' + m.id + '">' +
       (m.billing.forceFail ? '決済の失敗を止める' : '次回の決済を失敗させる（検証用）') + '</button>' +
       (m.billing.state === 'past_due' ? '<button class="btn btn-ghost btn-s" data-retry="' + m.id + '">いますぐ再決済</button>' : '') +
-      '<button class="btn btn-seal btn-s" data-force="' + m.id + '">強制解約</button>' +
+      '<button class="btn btn-danger btn-s" data-force="' + m.id + '">強制解約</button>' +
       '</div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:26px"><button class="btn btn-ghost btn-s" data-close>閉じる</button></div>';
 
@@ -249,7 +249,7 @@
         U.confirmBox('返金しますか', 'この決済を返金済みにします。\n本番では Stripe 側にも返金の指示が飛びます。', '返金する').then(function (ok) {
           if (!ok) return;
           try { R.refund(b.dataset.refund, '管理画面からの返金'); mod.close(); rerender(); U.toast('返金しました'); }
-          catch (e) { U.toast(e.message, 'seal'); }
+          catch (e) { U.toast(e.message, 'alert'); }
         });
       });
     });
@@ -275,8 +275,8 @@
 
   function payTag(s) {
     if (s === 'paid') return '<span class="tag tag-ok">完了</span>';
-    if (s === 'free') return '<span class="tag tag-indigo">無料</span>';
-    if (s === 'failed') return '<span class="tag tag-seal">失敗</span>';
+    if (s === 'free') return '<span class="tag tag-sea">無料</span>';
+    if (s === 'failed') return '<span class="tag tag-alert">失敗</span>';
     if (s === 'refunded') return '<span class="tag tag-warn">返金済み</span>';
     return '<span class="tag">' + esc(s) + '</span>';
   }
@@ -384,7 +384,7 @@
         var hit = 0;
         var cells = mtx.weeks.map(function (w) {
           var r = mtx.get(m.id, w.key);
-          if (w.start + 7 * EZ.DAY <= m.joinedAt) return '<td><span class="cellmark" style="border-style:dotted;color:var(--ink-3)">·</span></td>';
+          if (w.start + 7 * EZ.DAY <= m.joinedAt) return '<td><span class="cellmark na">·</span></td>';
           if (r) { hit++; return '<td><span class="cellmark yes" title="' + esc(r.body.slice(0, 40)) + '">✓</span></td>'; }
           return '<td><span class="cellmark no">—</span></td>';
         }).join('');
@@ -410,7 +410,7 @@
     h += '<h2 class="ttl-s bar-ttl">質問（' + qs.filter(function (q) { return !q.answeredPostId; }).length + '件が未回答）</h2>';
     h += qs.length ? '<div class="hist" style="margin-bottom:36px">' + qs.map(function (q) {
       return '<div class="hist-item"><div class="h">' +
-        (q.answeredPostId ? '<span class="tag tag-ok">回答済み</span>' : '<span class="tag tag-seal">未回答</span>') +
+        (q.answeredPostId ? '<span class="tag tag-ok">回答済み</span>' : '<span class="tag tag-alert">未回答</span>') +
         '<strong style="font-size:13px">' + esc(q.memberName) + '</strong>' +
         '<span class="small muted mono">' + R.fmtDate(q.at) + '</span></div>' +
         '<div class="b">' + esc(q.body) + '</div>' +
@@ -572,7 +572,7 @@
     h += '<table class="tbl"><thead><tr><th>コード</th><th>内容</th><th>入会金</th><th>無料月数</th><th>上限</th><th>使用済み</th><th></th></tr></thead><tbody>' +
       db.coupons.map(function (c) {
         return '<tr><td class="mono">' + esc(c.code) + '</td><td>' + esc(c.label) + '</td>' +
-          '<td>' + (c.waiveInitial ? '<span class="tag tag-seal">免除</span>' : '通常') + '</td>' +
+          '<td>' + (c.waiveInitial ? '<span class="tag tag-gold">免除</span>' : '通常') + '</td>' +
           '<td class="mono">' + c.freeMonths + 'ヶ月</td>' +
           '<td class="mono">' + (c.limit || '無制限') + '</td>' +
           '<td class="mono">' + c.used + '</td>' +
@@ -638,7 +638,7 @@
       'メールは会社ドメインから（SPF/DKIM設定込み）、LINEは友だち追加済みの会員だけに送ります。');
     h += '<table class="tbl"><thead><tr><th style="width:6em">経路</th><th>宛先</th><th>件名</th><th>本文</th><th style="width:9em">日時</th></tr></thead><tbody>' +
       (db.notifications.length ? db.notifications.slice(0, 120).map(function (n) {
-        return '<tr><td><span class="tag ' + (n.channel === 'line' ? 'tag-ok' : 'tag-indigo') + '">' +
+        return '<tr><td><span class="tag ' + (n.channel === 'line' ? 'tag-ok' : 'tag-sea') + '">' +
           (n.channel === 'line' ? 'LINE' : 'メール') + '</span></td>' +
           '<td class="small">' + esc(n.memberName) + '<br><span class="muted mono" style="font-size:10.5px">' + esc(n.to) + '</span></td>' +
           '<td class="small">' + esc(n.subject) + '</td>' +
@@ -660,12 +660,12 @@
       '<h3 class="ttl-s" style="margin-bottom:12px">読み込み</h3>' +
       '<p class="small muted" style="margin-bottom:14px">バックアップしたJSONを戻します。いまのデータは上書きされます。</p>' +
       '<input type="file" id="d-import" accept="application/json"></div>';
-    h += '<div class="card" style="border-color:var(--seal)">' +
+    h += '<div class="card" style="border-color:var(--coral)">' +
       '<h3 class="ttl-s" style="margin-bottom:12px">デモデータ</h3>' +
       '<p class="small muted" style="margin-bottom:14px">中身を見るための仮の会員・配信です。本番の前に必ず消してください。</p>' +
       '<div class="row"><button class="btn btn-ghost btn-s" id="d-seed">デモデータを入れる</button>' +
-      '<button class="btn btn-seal btn-s" id="d-clear">デモデータを消す</button>' +
-      '<button class="btn btn-seal btn-s" id="d-reset">全部まっさらに戻す</button></div></div>';
+      '<button class="btn btn-danger btn-s" id="d-clear">デモデータを消す</button>' +
+      '<button class="btn btn-danger btn-s" id="d-reset">全部まっさらに戻す</button></div></div>';
     return h;
   }
 
@@ -696,7 +696,7 @@
       var fr = new FileReader();
       fr.onload = function () {
         try { S.importJSON(fr.result); U.toast('読み込みました'); rerender(); }
-        catch (e) { U.toast('読み込めませんでした：' + e.message, 'seal'); }
+        catch (e) { U.toast('読み込めませんでした：' + e.message, 'alert'); }
       };
       fr.readAsText(f);
     });

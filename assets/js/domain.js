@@ -103,11 +103,11 @@
 
   function statusOf(member, now) {
     var b = member.billing;
-    if (b.state === 'suspended') return { code: 'suspended', label: '閲覧停止', tone: 'seal', canView: false };
+    if (b.state === 'suspended') return { code: 'suspended', label: '閲覧停止', tone: 'alert', canView: false };
     if (b.state === 'expired') return { code: 'expired', label: '終了', tone: 'dim', canView: false };
     if (b.state === 'past_due') return { code: 'past_due', label: '支払い確認中', tone: 'warn', canView: true };
     if (b.cancelRequestedAt) return { code: 'canceling', label: '解約予定', tone: 'warn', canView: true };
-    if (b.freeMonths > 0) return { code: 'free', label: '無料期間中', tone: 'indigo', canView: true };
+    if (b.freeMonths > 0) return { code: 'free', label: '無料期間中', tone: 'sea', canView: true };
     return { code: 'active', label: '有効', tone: 'ok', canView: true };
   }
   function canView(member, now) { return statusOf(member, now).canView; }
@@ -437,8 +437,8 @@
 
   function postVisibility(db, p, now) {
     var win = db.settings.archiveWindowDays * DAY;
-    if (p.publishAt > now) return { code: 'scheduled', label: '予約', visible: false, tone: 'indigo' };
-    if (p.permanent) return { code: 'permanent', label: '殿堂入り', visible: true, tone: 'seal' };
+    if (p.publishAt > now) return { code: 'scheduled', label: '予約', visible: false, tone: 'sea' };
+    if (p.permanent) return { code: 'permanent', label: '殿堂入り', visible: true, tone: 'gold' };
     var left = Math.ceil((p.publishAt + win - now) / DAY);
     if (left <= 0) return { code: 'archived', label: '掲載終了', visible: false, tone: 'dim' };
     return { code: 'open', label: '残り' + left + '日', visible: true, tone: left <= 5 ? 'warn' : '' };

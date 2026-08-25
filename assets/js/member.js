@@ -21,10 +21,9 @@
     var demoList = db.members.slice(0, 6);
     $('#root').innerHTML =
       '<div class="login-wrap"><div class="login-box">' +
-      '<a class="brand" href="index.html"><span class="bn">' + esc(db.settings.siteName) + '</span>' +
-      '<span class="bs">会員ページ</span></a>' +
+      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>会員ページ</small></span></a>' +
       '<div class="card">' +
-      (msg ? '<p class="small" style="color:var(--seal);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
+      (msg ? '<p class="small" style="color:var(--coral);margin-bottom:16px">' + esc(msg) + '</p>' : '') +
       '<label class="field"><span class="lbl">メールアドレス</span><input type="email" id="l-email" autocomplete="username"></label>' +
       '<label class="field"><span class="lbl">パスワード</span><input type="password" id="l-pass" autocomplete="current-password"></label>' +
       '<label class="check" style="margin-bottom:22px"><input type="checkbox" id="l-remember" checked><span>このブラウザでログインしたままにする</span></label>' +
@@ -77,7 +76,7 @@
     var counts = { lessons: prog.total - prog.submitted };
     return '<div class="app">' +
       '<aside class="side" id="side">' +
-      '<a class="brand" href="index.html"><span class="bn">' + esc(db.settings.siteName) + '</span><span class="bs">会員ページ</span></a>' +
+      '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>会員ページ</small></span></a>' +
       '<div class="side-grp">メニュー</div>' +
       NAV.map(function (n) {
         return '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '">' +
@@ -90,7 +89,8 @@
       '</div></aside>' +
       '<div>' +
       '<div class="mobile-head"><button id="menuBtn">メニュー</button>' +
-      '<span style="font-family:var(--serif);letter-spacing:.12em">' + esc(db.settings.siteName) + '</span></div>' +
+      '<picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
+      '<span class="ttl-s">' + esc(db.settings.siteName) + '</span></div>' +
       '<main class="main">' + inner + '</main></div></div>';
   }
 
@@ -105,11 +105,11 @@
     var msg = st.code === 'suspended'
       ? 'お支払いが確認できないため、閲覧を停止しています。カード情報を更新いただければすぐに再開できます。'
       : '会員期間が終了しています。もう一度入会いただくと、続きから利用できます。';
-    return '<div class="card" style="border-color:var(--seal);margin-bottom:26px">' +
-      '<span class="tag tag-seal">' + esc(st.label) + '</span>' +
+    return '<div class="card" style="border-color:var(--coral);margin-bottom:26px">' +
+      '<span class="tag tag-alert">' + esc(st.label) + '</span>' +
       '<p class="small" style="margin-top:12px;color:var(--ink-2)">' + esc(msg) + '</p>' +
       '<div class="row" style="margin-top:16px">' +
-      (st.code === 'suspended' ? '<button class="btn btn-seal btn-s" data-fixcard>カード情報を更新する</button>' : '') +
+      (st.code === 'suspended' ? '<button class="btn btn-danger btn-s" data-fixcard>カード情報を更新する</button>' : '') +
       '<a class="btn btn-ghost btn-s" href="index.html#/join">入会の案内</a></div></div>';
   }
 
@@ -145,7 +145,7 @@
       (newPosts.length ? '<a class="btn btn-s" href="#feed">読む</a>' : '') + '</div>';
     h += '</div>';
 
-    h += '<div class="stats" style="margin-bottom:30px">' +
+    h += '<div class="stats-app" style="margin-bottom:30px">' +
       '<div class="stat"><div class="k">講座の進み</div><div class="v">' + prog.submitted + '<small>/ ' + prog.total + ' 回</small></div></div>' +
       '<div class="stat"><div class="k">出したレポート</div><div class="v">' + db.reports.filter(function (r) { return r.memberId === me.id; }).length + '<small>本</small></div></div>' +
       '<div class="stat"><div class="k">いま読める配信</div><div class="v">' + R.visiblePosts(db, now).length + '<small>本</small></div></div>' +
@@ -176,7 +176,7 @@
         '<div class="ti"><h3>' + esc(l.title) + '</h3><p>' + esc(l.lead) + '</p></div>' +
         '<div class="rt">' +
         (s.submitted ? '<span class="tag tag-ok">提出済み</span>' :
-          s.unlocked ? '<span class="tag tag-indigo">受講できます</span>' :
+          s.unlocked ? '<span class="tag tag-sea">受講できます</span>' :
             '<span class="tag tag-dim">🔒 ' + esc(s.lockedBy) + '</span>') +
         '<span class="len muted mono small">' + l.minutes + '分</span>' +
         '</div></div>' +
@@ -248,7 +248,7 @@
           }
           if (res.askImpression) setTimeout(askImpression, res.guide ? 600 : 900);
           rerender();
-        } catch (err) { U.toast(err.message, 'seal'); }
+        } catch (err) { U.toast(err.message, 'alert'); }
       });
     });
   }
@@ -281,7 +281,7 @@
     return '<article class="post">' +
       '<div class="meta">' +
       '<span class="tag">' + esc(p.kind) + '</span>' +
-      (p.permanent ? '<span class="tag tag-seal">殿堂入り</span>' :
+      (p.permanent ? '<span class="tag tag-gold">殿堂入り</span>' :
         '<span class="tag' + (vis.tone ? ' tag-' + vis.tone : '') + '">' + esc(vis.label) + '</span>') +
       '<span class="dt">' + R.fmtDateTime(p.publishAt) + '</span>' +
       '</div>' +
@@ -324,9 +324,9 @@
     }).join('');
     if (me.flags.guideDeliveredAt) {
       h += '<h2 class="ttl-s bar-ttl" style="margin-top:34px">第7回の提出でお渡ししたもの</h2>' +
-        '<div class="mat" style="border-color:var(--seal)"><div class="ic" style="border-color:var(--seal);color:var(--seal)">PDF</div>' +
+        '<div class="mat mat--gold"><div class="ic">PDF</div>' +
         '<div class="tx"><h4>' + esc(db.guide.title) + '</h4><p>' + R.fmtDate(me.flags.guideDeliveredAt) + 'にお渡ししました</p></div>' +
-        '<button class="btn btn-seal btn-xs" data-dl="' + esc(db.guide.title) + '">開く</button></div>';
+        '<button class="btn btn-xs" data-dl="' + esc(db.guide.title) + '">開く</button></div>';
     }
     return h;
   }
@@ -361,7 +361,7 @@
     h += mine.length ? '<div class="hist">' + mine.map(function (r) {
       return '<div class="hist-item"><div class="h">' +
         '<span class="tag">' + esc(r.weekKey) + '</span>' +
-        (r.consent ? '<span class="tag tag-seal">紹介 許諾あり</span>' : '') +
+        (r.consent ? '<span class="tag tag-gold">紹介 許諾あり</span>' : '') +
         (r.fileName ? '<span class="tag tag-dim">' + esc(r.fileName) + '</span>' : '') +
         '<span class="small muted mono">' + R.fmtDate(r.submittedAt) + '</span></div>' +
         (r.title ? '<h4 style="font-size:14px;margin-bottom:6px">' + esc(r.title) + '</h4>' : '') +
@@ -384,7 +384,7 @@
         });
         U.toast('提出しました');
         rerender();
-      } catch (e) { U.toast(e.message, 'seal'); }
+      } catch (e) { U.toast(e.message, 'alert'); }
     });
   }
 
@@ -457,7 +457,7 @@
         R.fmtDate(b.nextRetryAt) + 'に自動でもう一度お試しします（' + b.failCount + '回目）。</p>' +
         '<p class="small" style="color:var(--ink-2);margin-bottom:18px">' +
         R.fmtDate(b.firstFailAt + db.settings.pastDueGraceDays * EZ.DAY) + 'までに確認できない場合、閲覧を停止します。</p>' +
-        '<button class="btn btn-seal btn-s" data-fixcard>カード情報を更新する</button></div>';
+        '<button class="btn btn-danger btn-s" data-fixcard>カード情報を更新する</button></div>';
     }
 
     h += '<h2 class="ttl-s bar-ttl">お支払いの履歴</h2>';
@@ -479,7 +479,7 @@
         'このページから解約できます。事務局への連絡は要りません。</p>' +
         '<p class="small" style="color:var(--ink-2);margin-bottom:18px">' +
         '解約しても ' + R.fmtDate(b.periodEnd) + ' までは今までどおりご覧いただけます。日割りの返金はありません。</p>' +
-        '<button class="btn btn-seal btn-s" id="do-cancel">解約する</button></div>';
+        '<button class="btn btn-danger btn-s" id="do-cancel">解約する</button></div>';
     } else {
       h += '<p class="small muted">会員期間はすでに終了しています。</p>';
     }
@@ -489,8 +489,8 @@
   function row(k, v) { return '<tr><th style="width:14em">' + k + '</th><td>' + v + '</td></tr>'; }
   function payTag(s) {
     if (s === 'paid') return '<span class="tag tag-ok">完了</span>';
-    if (s === 'free') return '<span class="tag tag-indigo">無料</span>';
-    if (s === 'failed') return '<span class="tag tag-seal">失敗</span>';
+    if (s === 'free') return '<span class="tag tag-sea">無料</span>';
+    if (s === 'failed') return '<span class="tag tag-alert">失敗</span>';
     if (s === 'refunded') return '<span class="tag tag-warn">返金済み</span>';
     return '<span class="tag">' + esc(s) + '</span>';
   }

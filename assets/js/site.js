@@ -21,8 +21,13 @@
     return '<div class="sec-head">' +
       (eyebrow ? '<span class="eyebrow">' + esc(eyebrow) + '</span>' : '') +
       '<h2 class="ttl-m bar-ttl">' + esc(title) + '</h2>' +
-      (lead ? '<p class="small" style="color:var(--ink-2);max-width:44em">' + nl2br(lead) + '</p>' : '') +
+      (lead ? '<p class="lead">' + nl2br(lead) + '</p>' : '') +
       '</div>';
+  }
+  function stat(num, unit, label) {
+    return '<div class="stat-i"><div class="stat__num">' + esc(num) +
+      (unit ? '<span class="unit">' + esc(unit) + '</span>' : '') + '</div>' +
+      '<div class="stat__label">' + esc(label) + '</div></div>';
   }
 
   /* ---------------- ホーム ---------------- */
@@ -30,20 +35,32 @@
     var st = db.settings;
     var html = '';
 
-    html += '<section class="hero"><div class="hero-grid"></div><div class="wrap">' +
+    html += '<section class="hero">' +
+      '<div class="hero__bg"><picture>' +
+      '<source srcset="assets/img/sea-light.webp" type="image/webp">' +
+      '<img src="assets/img/sea-light.jpg" alt="" aria-hidden="true"></picture></div>' +
+      '<div class="wrap">' +
       '<span class="eyebrow">' + esc(st.company) + '　／　' + esc(st.siteNameNote) + '</span>' +
       '<h1>' + esc(st.tagline) + '</h1>' +
-      '<p class="sub">値上がりする銘柄を教える場所ではありません。目の前に流れてきた金融の話が、' +
+      '<p class="hero__sub">値上がりする銘柄を教える場所ではありません。目の前に流れてきた金融の話が、' +
       'どこまで確かめられるものなのか。その手順だけを、7回の講座と毎週の実践で身につけます。</p>' +
-      '<div class="acts">' +
+      '<div class="hero__acts">' +
       '<a href="#/join" class="btn btn-fill">入会する</a>' +
-      '<a href="#/reports" class="btn">公開レポートを読む</a>' +
+      '<a href="#/reports" class="btn btn-ghost">公開レポートを読む</a>' +
       '</div>' +
-      '<p class="note">入会金 ' + R.fmtYen(st.priceInitial) + '（税込）＋ 月額 ' + R.fmtYen(st.priceMonthly) + '（税込）／縛りなし・会員ページからいつでも解約できます</p>' +
+      '<p class="hero__note">入会金 ' + R.fmtYen(st.priceInitial) + '（税込）＋ 月額 ' + R.fmtYen(st.priceMonthly) +
+      '（税込）／縛りなし・会員ページからいつでも解約できます</p>' +
+      '<hr class="hero__rule">' +
+      '<div class="stats">' +
+      stat(db.lessons.length, '回', '入門講座') +
+      stat('週2〜3', '', '会員限定配信') +
+      stat('週1', '本', 'レポート提出') +
+      stat(st.archiveWindowDays, '日', '配信の掲載期間') +
+      '</div>' +
       '</div></section>';
 
     html += '<div class="notice-band"><div class="wrap"><p>' +
-      '<strong>本サービスは教育であり、投資助言ではありません。</strong>　' +
+      '<strong>本サービスは教育であり、投資助言ではありません。</strong><br>' +
       '個別の金融商品の推奨、売買のタイミングの助言、運用の代理は一切行いません。' +
       '扱うのは「その情報が確かかどうかを、自分で確かめる手順」だけです。' +
       '</p></div></div>';
@@ -54,7 +71,7 @@
       '<div class="step"><h3>7回の入門講座</h3><p>検証の手順を1回ずつ。各回の最後に課題があり、出すとその場で次の回が開きます。承認待ちはありません。</p></div>' +
       '<div class="step"><h3>週2〜3回の会員限定配信</h3><p>いま流れている情報を題材に、実際に確かめる過程をそのまま流します。直近1ヶ月ぶんが読めます。</p></div>' +
       '<div class="step"><h3>週1回のレポート提出</h3><p>自分で選んだ題材を、主張・根拠・限界の型で書きます。配信で取り上げることもあります（許諾制）。</p></div>' +
-      '</div>');
+      '</div>', 'sec--tint');
 
     html += sec(
       head('入門講座', '7回で、確かめる順番が身につく。') +
@@ -66,21 +83,21 @@
           '<span class="len">約' + l.minutes + '分</span></div>';
       }).join('') +
       '</div>' +
-      '<p class="small muted" style="margin-top:20px">第1回は入会直後から見られます。第2回以降は、前の回の課題を出すと自動で開きます。</p>');
+      '<p class="small muted" style="margin-top:1.3rem">第1回は入会直後から見られます。第2回以降は、前の回の課題を出すと自動で開きます。</p>');
 
     var reps = db.publicReports.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); }).slice(0, 3);
     html += sec(
       head('公開レポート', '会員がどんなものを書いているか。', '実際に提出されたレポートと同じ型で書かれたものを公開しています。') +
       '<div class="rep-list">' + reps.map(repItem).join('') + '</div>' +
-      '<div style="margin-top:30px"><a href="#/reports" class="btn btn-ghost btn-s">すべての公開レポート</a></div>');
+      '<div style="margin-top:2rem"><a href="#/reports" class="btn btn-ghost btn-s">すべての公開レポート</a></div>', 'sec--tint');
 
     html += sec(head('料金', '入会金と月額だけ。') + priceBlock());
 
-    html += '<div class="line-cta"><div class="wrap">' +
+    html += '<section class="line-cta"><div class="wrap">' +
       '<h2>まずLINEで様子を見る</h2>' +
       '<p>友だち追加をすると、スクールの案内と、公開レポートの更新をお送りします。入会していない方への配信と会員向けの配信は分けています。</p>' +
-      '<a href="' + esc(st.lineUrl) + '" class="btn" target="_blank" rel="noopener">LINE公式アカウントを友だち追加</a>' +
-      '</div></div>';
+      '<a href="' + esc(st.lineUrl) + '" class="btn btn-fill" target="_blank" rel="noopener">LINE公式アカウントを友だち追加</a>' +
+      '</div></section>';
 
     return html;
   }
@@ -114,7 +131,7 @@
     return sec(
       head('公開レポート', 'ここで書かれているもの。',
         '会員が毎週提出するレポートと同じ型で書いています。主張・根拠・限界の3つに分けるところまでが1本です。') +
-      '<div class="row" style="margin-bottom:24px">' +
+      '<div class="row" style="margin-bottom:1.6rem">' +
       Object.keys(cats).map(function (c) { return '<span class="tag">' + esc(c) + '</span>'; }).join('') +
       '</div>' +
       '<div class="rep-list">' +
@@ -129,11 +146,11 @@
       '<div class="row" style="margin-bottom:16px"><span class="tag">' + esc(r.category) + '</span>' +
       '<span class="small muted mono">' + R.fmtDate(new Date(r.date).getTime()) + '</span></div>' +
       '<h1 class="ttl-l" style="line-height:1.6;margin-bottom:22px">' + esc(r.title) + '</h1>' +
-      '<p class="small" style="color:var(--ink-2);border-left:2px solid var(--ink);padding-left:16px;margin-bottom:36px">' + esc(r.lead) + '</p>' +
-      '<div class="story">' + r.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
-      '<hr class="rule" style="margin:44px 0 28px">' +
+      '<p class="lead" style="border-left:2px solid var(--gold);padding-left:1.1rem;margin-bottom:2.4rem">' + esc(r.lead) + '</p>' +
+      '<div class="prose">' + r.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
+      '<hr class="rule" style="margin:2.8rem 0 1.8rem">' +
       '<p class="small muted">同じ型で書けるようになるまでを、7回の講座で扱います。</p>' +
-      '<div class="row" style="margin-top:20px"><a href="#/join" class="btn btn-fill btn-s">入会する</a>' +
+      '<div class="row" style="margin-top:1.3rem"><a href="#/join" class="btn btn-fill btn-s">入会する</a>' +
       '<a href="#/reports" class="btn btn-ghost btn-s">一覧へ戻る</a></div>' +
       '</div></section>';
   }
@@ -143,7 +160,7 @@
     return '<section class="sec"><div class="wrap-narrow">' +
       '<span class="eyebrow">' + esc(db.settings.company) + '</span>' +
       '<h1 class="ttl-l bar-ttl">' + esc(db.story.title) + '</h1>' +
-      '<div class="story">' + db.story.paragraphs.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') +
+      '<div class="prose">' + db.story.paragraphs.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') +
       '<p class="sig">' + esc(db.settings.representative) + '</p></div>' +
       '</div></section>';
   }
@@ -151,7 +168,7 @@
   /* ---------------- 料金 ---------------- */
   function viewPrice() {
     return sec(head('料金', '入会金と月額だけ。') + priceBlock() +
-      '<div style="margin-top:36px"><a href="#/join" class="btn btn-fill">入会する</a></div>');
+      '<div style="margin-top:2.4rem"><a href="#/join" class="btn btn-fill">入会する</a></div>');
   }
 
   /* ---------------- 法定表記 ---------------- */
@@ -192,12 +209,12 @@
       '<label class="field"><span class="lbl">パスワード</span><input type="password" id="f-pass" placeholder="8文字以上" autocomplete="new-password"></label>' +
       '<label class="field"><span class="lbl">クーポンコード（お持ちの方のみ）</span><input type="text" id="f-coupon" placeholder="例：MONITOR" style="text-transform:uppercase">' +
       '<span class="hint">モニターの方は、入会金が免除され初月が無料になります。</span></label>' +
-      '<label class="check" style="margin-bottom:14px"><input type="checkbox" id="f-line" checked>' +
+      '<label class="check" style="margin-bottom:.9rem"><input type="checkbox" id="f-line" checked>' +
       '<span>LINE公式アカウントでも配信のお知らせを受け取る</span></label>' +
-      '<label class="check" style="margin-bottom:26px"><input type="checkbox" id="f-agree">' +
+      '<label class="check" style="margin-bottom:1.7rem"><input type="checkbox" id="f-agree">' +
       '<span><a href="#/terms">利用規約</a>・<a href="#/privacy">プライバシーポリシー</a>・<a href="#/tokushoho">特定商取引法に基づく表記</a>に同意します</span></label>' +
       '<button class="btn btn-fill" id="f-submit" style="width:100%">お支払いに進む</button>' +
-      '<p class="small muted" style="margin-top:14px">次の画面はカード決済です。カード情報は当社では保持しません。</p>' +
+      '<p class="small muted" style="margin-top:.9rem">次の画面はカード決済です。カード情報は当社では保持しません。</p>' +
       '</div>' +
       '<div class="signup-side">' +
       '<span class="eyebrow">お支払い内容</span>' +
@@ -215,8 +232,8 @@
     h += '<div class="bill-line"><span>初月の月額</span><span class="mono">' +
       (p.first === 0 ? '<s class="muted">' + R.fmtYen(st.priceMonthly) + '</s> ' + R.fmtYen(0) : R.fmtYen(p.first)) + '</span></div>';
     h += '<div class="bill-total"><span>本日のお支払い</span><span>' + R.fmtYen(p.total) + '</span></div>';
-    if (p.coupon) h += '<p style="margin-top:12px"><span class="tag tag-seal">' + esc(p.coupon.label) + '</span></p>';
-    else if (code) h += '<p class="small" style="margin-top:12px;color:var(--seal)">このクーポンは使えません</p>';
+    if (p.coupon) h += '<p style="margin-top:12px"><span class="tag tag-alert">' + esc(p.coupon.label) + '</span></p>';
+    else if (code) h += '<p class="small" style="margin-top:12px;color:var(--coral-ink)">このクーポンは使えません</p>';
     h += '<p class="bill-note">次回のお支払いは ' + R.fmtDate(R.addMonths(S.clock.now(), p.first === 0 ? 1 : 1)) + ' です。' +
       '以降は入会日を基準に毎月同じ日にお支払いいただきます。' +
       '解約はいつでも会員ページからでき、その請求期間の末日までは見られます。</p>';
@@ -244,14 +261,14 @@
       '<h3 class="ttl-s" style="margin-bottom:6px">カード情報の入力</h3>' +
       '<p class="small muted" style="margin-bottom:22px">この画面は本番では Stripe の決済画面に置き換わります。' +
       'カード番号は当社のサーバーを通りません。</p>' +
-      '<div class="card-flat" style="margin-bottom:22px">' +
+      '<div class="card-flat" style="margin-bottom:1.5rem">' +
       '<div class="bill-line"><span>入会金</span><span class="mono">' + R.fmtYen(p.initial) + '</span></div>' +
       '<div class="bill-line"><span>初月の月額</span><span class="mono">' + R.fmtYen(p.first) + '</span></div>' +
       '<div class="bill-total"><span>合計</span><span>' + R.fmtYen(p.total) + '</span></div>' +
       '</div>' +
       '<label class="field"><span class="lbl">カード番号（デモ）</span>' +
-      '<input type="text" value="4242 4242 4242 4242" readonly style="font-family:var(--mono);background:var(--card-2)"></label>' +
-      '<div class="row" style="justify-content:flex-end;margin-top:26px">' +
+      '<input type="text" value="4242 4242 4242 4242" readonly class="mono" style="background:var(--foam)"></label>' +
+      '<div class="row" style="justify-content:flex-end;margin-top:1.7rem">' +
       '<button class="btn btn-ghost btn-s" data-close>やめる</button>' +
       '<button class="btn btn-fill btn-s" data-pay>' + R.fmtYen(p.total) + ' を支払う</button></div>',
       { sticky: true });
@@ -271,7 +288,7 @@
           '<a href="member.html" class="btn btn-fill" style="width:100%">会員ページへ</a>',
           { sticky: true });
       } catch (e) {
-        U.toast(e.message, 'seal');
+        U.toast(e.message, 'alert');
       }
     });
   }

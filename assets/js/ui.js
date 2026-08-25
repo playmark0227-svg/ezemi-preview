@@ -18,7 +18,7 @@
     var host = $('#toast');
     if (!host) { host = document.createElement('div'); host.id = 'toast'; document.body.appendChild(host); }
     var el = document.createElement('div');
-    el.className = 'toast' + (kind === 'seal' ? ' seal' : '');
+    el.className = 'toast' + (kind === 'alert' ? ' alert' : '');
     el.textContent = msg;
     host.appendChild(el);
     setTimeout(function () { el.remove(); }, 3800);
