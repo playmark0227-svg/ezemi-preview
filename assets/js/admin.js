@@ -846,7 +846,9 @@
     });
     $('#d-seed').addEventListener('click', function () { EZ.demo.seed(); U.toast('デモデータを入れました'); rerender(); });
     $('#d-clear').addEventListener('click', function () {
-      U.confirmBox('デモデータを消しますか', 'デモの会員・配信・提出物だけを消します。\n設定と講座の内容は残ります。', '消す').then(function (ok) {
+      U.confirmBox('デモデータを消しますか',
+        'デモの会員・配信・提出物だけを消します。設定と講座の内容は残ります。\n' +
+        'あとで戻したくなったら、会員ページのログイン画面から入れ直せます。', '消す').then(function (ok) {
         if (!ok) return; EZ.demo.clear(); U.toast('消しました'); rerender();
       });
     });

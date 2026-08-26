@@ -58,6 +58,7 @@
   }
 
   function seed() {
+    EZ.store.update(function (d) { delete d.__demoCleared; });
     var S = EZ.store, R = EZ.rules;
     S.update(function (db) {
       var now = S.clock.now();
@@ -166,17 +167,28 @@
       db.posts = db.posts.filter(function (p) { return !p.isDemo; });
       db.adminInbox = [];
       db.coupons.forEach(function (c) { c.used = 0; });
+      db.__demoCleared = true;   /* わざと消した、という印。勝手に戻さないため */
       return true;
     });
   }
 
-  /* 初回だけ自動で入れる。管理画面の「データ」から消せる。 */
+  /* 体験版のデモデータを用意する。
+     初回はもちろん、何かの拍子に会員が0人になったときも入れ直す。
+     ただし管理画面から「デモデータを消す」を押した場合だけは、意思とみなして戻さない。 */
   function ensure() {
+    if (EZ.store.mode() === 'cloud') return;
     var db = EZ.store.read();
-    if (!db.__needsDemo) return;
+    var empty = !db.members || db.members.length === 0;
+    if (!db.__needsDemo && !(empty && !db.__demoCleared)) return;
     EZ.store.update(function (d) { delete d.__needsDemo; });
     seed();
   }
 
-  EZ.demo = { seed: seed, clear: clear, isSeeded: isSeeded, ensure: ensure };
+  /* ログイン画面から呼ぶ用。消した印ごと解除して入れ直す */
+  function restore() {
+    EZ.store.update(function (d) { delete d.__demoCleared; delete d.__needsDemo; });
+    seed();
+  }
+
+  EZ.demo = { seed: seed, clear: clear, isSeeded: isSeeded, ensure: ensure, restore: restore };
 })(window);

@@ -139,8 +139,20 @@
       catch (e) { return null; }
     },
     set: function (obj, remember) {
+      /* 保存に失敗しても押した操作が黙って無かったことにならないよう、
+         必ずどちらかには置く。両方だめなら呼び出し側に知らせる。 */
       var s = JSON.stringify(obj);
-      if (remember) localStorage.setItem(SESSION_KEY, s); else sessionStorage.setItem(SESSION_KEY, s);
+      try {
+        if (remember) localStorage.setItem(SESSION_KEY, s); else sessionStorage.setItem(SESSION_KEY, s);
+        return true;
+      } catch (e) {
+        try { sessionStorage.setItem(SESSION_KEY, s); return true; }
+        catch (e2) {
+          console.warn('ログイン状態を保存できませんでした', e2);
+          if (EZ.ui) EZ.ui.toast('ブラウザに保存できませんでした。プライベートウィンドウでは使えないことがあります', 'alert');
+          return false;
+        }
+      }
     },
     clear: function () { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); }
   };

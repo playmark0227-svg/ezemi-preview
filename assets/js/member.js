@@ -100,7 +100,12 @@
           var st = R.statusOf(m, S.clock.now());
           return '<button class="btn btn-ghost btn-xs" style="margin:0 6px 6px 0" data-demo="' + m.id + '">' +
             esc(m.name) + '　<span class="muted">' + esc(st.label) + '</span></button>';
-        }).join('') + '</div>' : '') +
+        }).join('') + '</div>'
+        : '<div class="card-flat" style="margin-top:18px">' +
+          '<p class="small muted" style="margin-bottom:.8rem">' +
+          'いま会員が1人もいないので、デモ用のログインは出ていません。' +
+          '下のボタンで仮の会員6名と配信を入れ直せます。</p>' +
+          '<button class="btn btn-ghost btn-s" id="l-restore">デモデータを入れる</button></div>') +
       '<p class="center small muted" style="margin-top:22px"><a href="index.html">スクールのページへ戻る</a></p>' +
       '</div></div>';
 
@@ -111,6 +116,13 @@
         S.session.set({ memberId: b.dataset.demo }, true);
         boot();
       });
+    });
+    var rs = $('#l-restore');
+    if (rs) rs.addEventListener('click', function () {
+      EZ.demo.restore();
+      db = S.read();
+      renderLogin();
+      U.toast('デモデータを入れ直しました');
     });
   }
 
