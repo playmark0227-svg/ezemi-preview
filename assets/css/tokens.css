@@ -82,7 +82,7 @@ table { border-collapse: collapse; width: 100%; }
 
   --cell-pad-x:  clamp(1.3rem, 2.2vw, 1.85rem);
   --cell-pad-y:  clamp(1.5rem, 2.4vw, 2rem);
-  --cell-radius: 10px;
+  --cell-radius: 4px;
   --cell-rule:   44px;
   --cell-line:   var(--line);
   --cell-line-hover: rgba(27, 79, 107, .30);
@@ -138,20 +138,14 @@ p, li, dd { text-wrap: pretty; }
 .ttl-s { font-family: var(--font-serif); font-size: 1.16rem; font-weight: 500; color: var(--deep); letter-spacing: .04em; }
 
 .eyebrow {
-  display: inline-flex; align-items: center; gap: .7em;
-  font-family: var(--font-en);
-  font-size: .7rem; font-weight: 600; letter-spacing: .3em;
-  color: var(--muted); text-transform: uppercase;
+  display: block;
+  font-size: .74rem; font-weight: 600; letter-spacing: .16em;
+  color: var(--muted);
 }
-.eyebrow::before { content: ""; width: 20px; height: 1px; background: var(--ink-3); }
 
-/* 見出しの下の短い真鍮色の罫 */
-.bar-ttl { padding-bottom: .85rem; position: relative; margin-bottom: 1.6rem; }
-.bar-ttl::after {
-  content: ""; position: absolute; left: 0; bottom: 0;
-  width: var(--cell-rule); height: 2px;
-  background: linear-gradient(90deg, var(--gold), var(--gold-2));
-}
+/* 見出しの下に罫は引かない。余白で段差をつける。
+   （罫を全部の見出しに引いていたのをやめた。装飾が繰り返されると様式に見える） */
+.bar-ttl { margin-bottom: 1.5rem; }
 
 .lead { font-size: 1rem; line-height: 2.05; color: var(--ink-2); max-width: var(--measure-lead); }
 .small { font-size: .84rem; line-height: 1.9; }
@@ -170,18 +164,12 @@ p, li, dd { text-wrap: pretty; }
   padding: 1.05em 2.2em; border-radius: var(--r-s); font-weight: 600;
   letter-spacing: .08em; font-size: .92rem;
   color: var(--deep); background: var(--bg);
-  box-shadow: var(--shadow-s);
-  transition: transform .4s var(--ease), box-shadow .4s var(--ease), background .4s var(--ease);
-  position: relative; overflow: hidden; white-space: nowrap;
+  transition: filter .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
+  position: relative; white-space: nowrap;
 }
-.btn::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.55), transparent 70%);
-  transform: translateX(-120%); transition: transform 0s .35s;
-}
-.btn:hover { transform: translateY(calc(var(--lift-sm) * -1)); box-shadow: var(--shadow); }
-.btn:hover::after { transform: translateX(120%); transition: transform .6s var(--ease); }
-.btn:active { transform: translateY(0); }
+/* ホバーで光を走らせる演出はやめた。上品に見せる小細工がいちばん既視感を生む */
+.btn:hover { background: var(--bg); filter: brightness(.94); }
+.btn:active { filter: brightness(.88); }
 
 .btn-fill { --bg: var(--deep); color: #f7f9fa; }
 .btn-fill:hover { --bg: var(--deep-2); }
@@ -191,48 +179,46 @@ p, li, dd { text-wrap: pretty; }
   box-shadow: inset 0 0 0 1px rgba(26,43,56,.28);
 }
 .btn-ghost:hover { background: rgba(26,43,56,.05); box-shadow: inset 0 0 0 1px rgba(26,43,56,.5); }
-.btn-ghost::after { content: none; }
 .btn-danger { --bg: transparent; color: var(--coral-ink); box-shadow: inset 0 0 0 1px rgba(181,113,79,.42); }
-.btn-danger:hover { --bg: var(--coral); color: #fff; box-shadow: var(--shadow-s); }
+.btn-danger:hover { --bg: var(--coral); color: #fff; }
 
 .btn-s  { padding: .72em 1.4em; font-size: .84rem; letter-spacing: .05em; }
 .btn-xs { padding: .5em 1em; font-size: .76rem; letter-spacing: .03em; font-weight: 600; border-radius: var(--r-xs); }
-.btn:disabled { opacity: .38; cursor: not-allowed; transform: none; box-shadow: var(--shadow-s); }
-.btn:disabled::after { content: none; }
+.btn:disabled { opacity: .38; cursor: not-allowed; filter: none; }
 
 /* ---------- 06. Tags ---------- */
+/* 状態の印。塗りつぶさず、文字色と細い枠だけで区別する。
+   色つきの丸い錠剤が並ぶと、それだけで管理ツールの既製品に見える。 */
 .tag {
   display: inline-flex; align-self: flex-start; align-items: center; gap: .4em;
-  padding: .4em .9em; border-radius: var(--r-xs); font-size: .72rem; font-weight: 600;
-  letter-spacing: .04em; line-height: 1.6; white-space: nowrap;
-  background: rgba(27,79,107,.07); color: var(--ocean);
-  border: 1px solid rgba(27,79,107,.14);
+  padding: .18em .55em; border-radius: 2px; font-size: .72rem; font-weight: 600;
+  letter-spacing: .02em; line-height: 1.65; white-space: nowrap;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line);
 }
-.tag-sea   { background: rgba(27,79,107,.09); color: var(--ocean);      border-color: rgba(27,79,107,.22); }
-.tag-gold  { background: rgba(176,141,79,.10); color: var(--gold-ink);  border-color: rgba(176,141,79,.30); }
-.tag-alert { background: rgba(181,113,79,.09); color: var(--coral-ink); border-color: rgba(181,113,79,.26); }
-.tag-warn  { background: rgba(176,141,79,.10); color: var(--gold-ink);  border-color: rgba(176,141,79,.30); }
-.tag-ok    { background: rgba(45,110,85,.08);  color: var(--green);     border-color: rgba(45,110,85,.22); }
-.tag-dim   { background: transparent; color: var(--muted); border-color: var(--line); border-style: dashed; }
+.tag-sea   { color: var(--ocean);      border-color: rgba(27,79,107,.35); }
+.tag-gold  { color: var(--gold-ink);   border-color: rgba(176,141,79,.45); }
+.tag-alert { color: var(--coral-ink);  border-color: rgba(181,113,79,.42); }
+.tag-warn  { color: var(--gold-ink);   border-color: rgba(176,141,79,.45); }
+.tag-ok    { color: var(--green);      border-color: rgba(45,110,85,.35); }
+.tag-dim   { color: var(--ink-3);      border-color: var(--line); }
 
 /* ---------- 07. Cells / Cards ---------- */
 /* 白い面＋ヘアライン＋左端に揃えた真鍮色の短い罫。本社サイトと同じ形。 */
+/* 面は白と罫線だけ。真鍮色の罫はここでは引かない。
+   以前は全部のカードの上端に入れていたが、どこにでもあると印にならなくなる。
+   いま真鍮色を使うのは、ヒーローのボタンと数字まわりだけ。 */
 .card {
   position: relative; text-align: left;
-  background-color: var(--white);
-  background-image: linear-gradient(90deg, var(--gold), var(--gold-2));
-  background-repeat: no-repeat;
-  background-size: var(--cell-rule) 2px;
-  background-position: var(--cell-pad-x) 0;
+  background: var(--white);
   border: 1px solid var(--cell-line);
-  border-radius: var(--cell-radius);
+  border-radius: var(--r-s);
   padding: var(--cell-pad-y) var(--cell-pad-x);
-  box-shadow: var(--shadow-s);
 }
 .card-flat {
   background: var(--foam);
   border: 1px solid var(--line);
-  border-radius: var(--r-m);
+  border-radius: var(--r-s);
   padding: 1.15rem 1.3rem;
 }
 
@@ -255,16 +241,16 @@ textarea { line-height: 1.95; resize: vertical; min-height: 7.5rem; }
 .check input { margin-top: .42rem; flex: 0 0 auto; accent-color: var(--ocean); }
 
 /* ---------- 09. Tables ---------- */
-.tbl { font-size: .86rem; background: var(--white); border-radius: var(--r-m); overflow: hidden; }
-.tbl th {
-  text-align: left; font-weight: 600; font-size: .72rem; letter-spacing: .12em;
-  color: var(--muted); padding: .78rem .9rem; white-space: nowrap;
-  border-bottom: 1px solid var(--ink-3); background: var(--foam);
+.tbl { font-size: .86rem; background: var(--white); }
+  .tbl th {
+  text-align: left; font-weight: 600; font-size: .74rem; letter-spacing: .06em;
+  color: var(--muted); padding: .7rem .9rem .5rem; white-space: nowrap;
+  border-bottom: 1px solid var(--ink); background: transparent;
 }
 .tbl td { padding: .82rem .9rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .tbl tbody tr:last-child td { border-bottom: 0; }
 .tbl tbody tr { transition: background .2s; }
-.tbl tbody tr:hover { background: rgba(27,79,107,.035); }
+.tbl tbody tr:hover { background: rgba(27,79,107,.03); }
 .tbl .num { text-align: right; font-family: var(--font-en); }
 
 /* ---------- 10. Utilities ---------- */
@@ -322,6 +308,14 @@ textarea { line-height: 1.95; resize: vertical; min-height: 7.5rem; }
   transition: background .25s, border-color .25s;
 }
 #devbar button:hover { background: rgba(255,255,255,.16); border-color: rgba(143,184,199,.55); }
+#devbar, #devbar button, #devbar span { white-space: nowrap; }
+
+@media (max-width: 640px) {
+  /* 狭い画面では折り返して縦に伸びていたので、日付だけ残して詰める */
+  #devbar { left: 0; right: 0; border-radius: 0; gap: .4rem; padding: .45rem .6rem; font-size: .68rem; justify-content: center; }
+  #devbar .dev-lbl { display: none; }
+  #devbar button { padding: .3em .6em; font-size: .68rem; }
+}
 
 /* ---------- 14. Focus / Selection ---------- */
 :focus-visible { outline: 2px solid var(--ocean); outline-offset: 3px; }

@@ -151,7 +151,7 @@
       : '<p class="small muted">いまは何もありません。</p>';
 
     if (pastDue.length) {
-      h += '<h2 class="ttl-s bar-ttl" style="margin-top:36px">支払いに問題がある会員</h2>' +
+      h += '<h2 class="ttl-s" style="margin-top:36px">支払いに問題がある会員</h2>' +
         '<table class="tbl"><thead><tr><th>氏名</th><th>状態</th><th>最初の失敗</th><th>次の自動リトライ</th><th></th></tr></thead><tbody>' +
         pastDue.map(function (m) {
           var st = R.statusOf(m, now);
@@ -245,7 +245,7 @@
       '<tr><th>LINE通知</th><td>' + (m.lineLinked ? '受け取る' : '受け取らない') + '</td></tr>' +
       '</tbody></table>';
 
-    h += '<h4 class="ttl-s bar-ttl">講座の提出内容</h4>';
+    h += '<h4 class="ttl-s">講座の提出内容</h4>';
     h += states.map(function (s) {
       return '<div class="hist-item"><div class="h">' +
         '<span class="tag">第' + s.lesson.no + '回</span>' +
@@ -256,11 +256,11 @@
     }).join('');
 
     if (imps.length) {
-      h += '<h4 class="ttl-s bar-ttl" style="margin-top:26px">感想</h4>' +
+      h += '<h4 class="ttl-s" style="margin-top:26px">感想</h4>' +
         imps.map(function (i) { return '<div class="hist-item"><div class="h"><span class="small muted mono">' + R.fmtDate(i.at) + '</span></div><div class="b">' + esc(i.text) + '</div></div>'; }).join('');
     }
 
-    h += '<h4 class="ttl-s bar-ttl" style="margin-top:26px">週1レポート（' + reports.length + '本）</h4>';
+    h += '<h4 class="ttl-s" style="margin-top:26px">週1レポート（' + reports.length + '本）</h4>';
     h += reports.length ? reports.map(function (r) {
       return '<div class="hist-item"><div class="h"><span class="tag">' + esc(r.weekKey) + '</span>' +
         (r.consent ? '<span class="tag tag-gold">紹介 許諾あり</span>' : '') +
@@ -269,7 +269,7 @@
         '<div class="b">' + esc(r.body) + '</div></div>';
     }).join('') : '<p class="small muted">まだありません。</p>';
 
-    h += '<h4 class="ttl-s bar-ttl" style="margin-top:26px">お支払い</h4>' +
+    h += '<h4 class="ttl-s" style="margin-top:26px">お支払い</h4>' +
       '<table class="tbl"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th><th></th></tr></thead><tbody>' +
       pays.map(function (p) {
         return '<tr><td class="mono">' + R.fmtDate(p.at) + '</td><td>' + (p.kind === 'initial' ? '入会金' : '月額') + '</td>' +
@@ -277,7 +277,7 @@
           '<td>' + (p.status === 'paid' && p.amount > 0 ? '<button class="btn btn-ghost btn-xs" data-refund="' + p.id + '">返金</button>' : '') + '</td></tr>';
       }).join('') + '</tbody></table>';
 
-    h += '<h4 class="ttl-s bar-ttl" style="margin-top:26px">操作</h4>' +
+    h += '<h4 class="ttl-s" style="margin-top:26px">操作</h4>' +
       '<div class="row">' +
       '<button class="btn btn-ghost btn-s" data-togglefail="' + m.id + '">' +
       (m.billing.forceFail ? '決済の失敗を止める' : '次回の決済を失敗させる（検証用）') + '</button>' +
@@ -355,7 +355,7 @@
       '</div>';
 
     var sorted = db.posts.slice().sort(function (a, b) { return b.publishAt - a.publishAt; });
-    h += '<h2 class="ttl-s bar-ttl">投稿した配信（' + sorted.length + '本）</h2>';
+    h += '<h2 class="ttl-s">投稿した配信（' + sorted.length + '本）</h2>';
     h += '<table class="tbl"><thead><tr><th>公開日時</th><th>種別</th><th>題名</th><th>状態</th><th>通知</th><th></th></tr></thead><tbody>' +
       sorted.map(function (p) {
         var vis = R.postVisibility(db, p, now);
@@ -452,7 +452,7 @@
 
     /* 質問 */
     var qs = db.questions;
-    h += '<h2 class="ttl-s bar-ttl">質問（' + qs.filter(function (q) { return !q.answeredPostId; }).length + '件が未回答）</h2>';
+    h += '<h2 class="ttl-s">質問（' + qs.filter(function (q) { return !q.answeredPostId; }).length + '件が未回答）</h2>';
     h += qs.length ? '<div class="hist" style="margin-bottom:36px">' + qs.map(function (q) {
       return '<div class="hist-item"><div class="h">' +
         (q.answeredPostId ? '<span class="tag tag-ok">回答済み</span>' : '<span class="tag tag-alert">未回答</span>') +
@@ -464,7 +464,7 @@
     }).join('') + '</div>' : '<p class="small muted" style="margin-bottom:36px">まだありません。</p>';
 
     /* 感想 */
-    h += '<h2 class="ttl-s bar-ttl">感想（第3回の案内から）</h2>';
+    h += '<h2 class="ttl-s">感想（第3回の案内から）</h2>';
     h += db.impressions.length ? '<div class="hist">' + db.impressions.map(function (i) {
       return '<div class="hist-item"><div class="h"><strong style="font-size:13px">' + esc(i.memberName) + '</strong>' +
         '<span class="small muted mono">' + R.fmtDate(i.at) + '</span></div><div class="b">' + esc(i.text) + '</div></div>';
@@ -510,7 +510,7 @@
   function viewContent() {
     var h = pagehead('動画・教材・公開ページ', '動画URLと教材PDFの差し替え、公開側の文言はここで直します。');
 
-    h += '<h2 class="ttl-s bar-ttl">動画講座（7回）</h2>' +
+    h += '<h2 class="ttl-s">動画講座（7回）</h2>' +
       '<table class="tbl" style="margin-bottom:36px"><thead><tr><th style="width:5em">回</th><th>題名</th><th>動画URL（限定公開）</th><th></th></tr></thead><tbody>' +
       db.lessons.map(function (l) {
         return '<tr><td class="mono">第' + l.no + '回</td>' +
@@ -519,7 +519,7 @@
           '<td><button class="btn btn-ghost btn-xs" data-lsave="' + l.no + '">保存</button></td></tr>';
       }).join('') + '</tbody></table>';
 
-    h += '<h2 class="ttl-s bar-ttl">教材PDF</h2>' +
+    h += '<h2 class="ttl-s">教材PDF</h2>' +
       '<table class="tbl" style="margin-bottom:36px"><thead><tr><th>題名</th><th>ファイル</th><th>説明</th><th></th></tr></thead><tbody>' +
       db.materials.map(function (m) {
         return '<tr><td><input type="text" data-mtitle="' + m.id + '" value="' + esc(m.title) + '"></td>' +
@@ -530,7 +530,7 @@
           '<button class="btn btn-ghost btn-xs" data-msave="' + m.id + '">保存</button></td></tr>';
       }).join('') + '</tbody></table>';
 
-    h += '<h2 class="ttl-s bar-ttl">公開レポート（公開側）</h2>' +
+    h += '<h2 class="ttl-s">公開レポート（公開側）</h2>' +
       '<table class="tbl" style="margin-bottom:36px"><thead><tr><th>分類</th><th>題名</th><th>公開日</th></tr></thead><tbody>' +
       db.publicReports.map(function (r) {
         return '<tr><td><span class="tag">' + esc(r.category) + '</span></td><td>' + esc(r.title) + '</td>' +
@@ -538,7 +538,7 @@
       }).join('') + '</tbody></table>' +
       '<p class="small muted" style="margin-top:-24px;margin-bottom:36px">※ 公開レポートの本文は当方支給の原稿を流し込みます。追加できる形にしてあります。</p>';
 
-    h += '<h2 class="ttl-s bar-ttl">サイトの文言</h2>' +
+    h += '<h2 class="ttl-s">サイトの文言</h2>' +
       '<div class="setting-grid">' +
       textField('siteName', 'サイト名') +
       textField('tagline', 'トップの一文') +

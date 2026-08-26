@@ -218,7 +218,7 @@
 
     var recent = R.visiblePosts(db, now).slice(0, 3);
     if (recent.length) {
-      h += '<h2 class="ttl-s bar-ttl">最近の配信</h2>' + recent.map(postCard).join('') +
+      h += '<h2 class="ttl-s">最近の配信</h2>' + recent.map(postCard).join('') +
         '<a class="btn btn-ghost btn-s" href="#feed">配信アーカイブへ</a>';
     }
     return h;
@@ -387,7 +387,7 @@
         '<button class="btn btn-ghost btn-xs" data-dl="' + esc(m.title) + '">開く</button></div>';
     }).join('');
     if (me.flags.guideDeliveredAt) {
-      h += '<h2 class="ttl-s bar-ttl" style="margin-top:34px">第7回の提出でお渡ししたもの</h2>' +
+      h += '<h2 class="ttl-s" style="margin-top:34px">第7回の提出でお渡ししたもの</h2>' +
         '<div class="mat mat--gold"><div class="ic">PDF</div>' +
         '<div class="tx"><h4>' + esc(db.guide.title) + '</h4><p>' + R.fmtDate(me.flags.guideDeliveredAt) + 'にお渡ししました</p></div>' +
         '<button class="btn btn-xs" data-dl="' + esc(db.guide.title) + '">開く</button></div>';
@@ -421,7 +421,7 @@
         '<button class="btn btn-fill" id="r-send">提出する</button></div>';
     }
 
-    h += '<h2 class="ttl-s bar-ttl">これまでのレポート（' + mine.length + '本）</h2>';
+    h += '<h2 class="ttl-s">これまでのレポート（' + mine.length + '本）</h2>';
     h += mine.length ? '<div class="hist">' + mine.map(function (r) {
       return '<div class="hist-item"><div class="h">' +
         '<span class="tag">' + esc(r.weekKey) + '</span>' +
@@ -463,7 +463,7 @@
     h += '<div class="card" style="margin-bottom:30px">' +
       '<label class="field"><span class="lbl">質問</span><textarea id="q-body" placeholder="できるだけ具体的に書いてください。"></textarea></label>' +
       '<button class="btn btn-fill" id="q-send">送る</button></div>';
-    h += '<h2 class="ttl-s bar-ttl">出した質問（' + mine.length + '件）</h2>';
+    h += '<h2 class="ttl-s">出した質問（' + mine.length + '件）</h2>';
     h += mine.length ? '<div class="hist">' + mine.map(function (q) {
       var post = q.answeredPostId ? db.posts.filter(function (p) { return p.id === q.answeredPostId; })[0] : null;
       return '<div class="hist-item"><div class="h">' +
@@ -524,7 +524,7 @@
         '<button class="btn btn-danger btn-s" data-fixcard>カード情報を更新する</button></div>';
     }
 
-    h += '<h2 class="ttl-s bar-ttl">お支払いの履歴</h2>';
+    h += '<h2 class="ttl-s">お支払いの履歴</h2>';
     h += '<table class="tbl" style="margin-bottom:34px"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th></tr></thead><tbody>' +
       (pays.length ? pays.map(function (p) {
         return '<tr><td class="mono">' + R.fmtDate(p.at) + '</td>' +
@@ -533,7 +533,7 @@
           '<td>' + payTag(p.status) + '</td></tr>';
       }).join('') : '<tr><td colspan="4" class="muted">まだありません</td></tr>') + '</tbody></table>';
 
-    h += '<h2 class="ttl-s bar-ttl">解約</h2>';
+    h += '<h2 class="ttl-s">解約</h2>';
     if (b.cancelRequestedAt) {
       h += '<div class="card"><p class="small" style="color:var(--ink-2);margin-bottom:16px">' +
         '解約を受け付けています。' + R.fmtDate(b.periodEnd) + ' までは今までどおりご覧いただけます。以降は自動で終了し、次のお支払いは発生しません。</p>' +

@@ -48,10 +48,14 @@
 .pagehead p { font-size: .87rem; color: var(--ink-2); margin-top: .6rem; max-width: var(--measure-body); line-height: 2; }
 .mobile-head { display: none; }
 
+/* 見出しの下の罫をやめたぶん、余白で段差をつける */
+.main h2.ttl-s, .main h4.ttl-s { margin: 2.4rem 0 1rem; }
+.main > .pagehead + h2.ttl-s { margin-top: 0; }
+.modal h3.ttl-s + *, .modal h4.ttl-s { margin-top: 1.6rem; }
+
 /* ---------- 今週やること ---------- */
-.todo { background: var(--white); border: 1px solid var(--cell-line); border-radius: var(--cell-radius); box-shadow: var(--shadow-s); overflow: hidden; }
-.todo-item { display: flex; gap: 1rem; align-items: flex-start; padding: 1.15rem 1.4rem; border-bottom: 1px solid var(--line); }
-.todo-item:last-child { border-bottom: 0; }
+.todo { border-top: 1px solid var(--ink); }
+.todo-item { display: flex; gap: 1rem; align-items: flex-start; padding: 1.05rem .2rem; border-bottom: 1px solid var(--line); }
 .todo-item .mk {
   width: 20px; height: 20px; border: 1px solid var(--ocean); border-radius: var(--r-xs);
   flex: 0 0 auto; margin-top: .28rem; display: flex; align-items: center; justify-content: center;
@@ -64,28 +68,26 @@
 .todo-item .tx p { font-size: .82rem; color: var(--ink-2); line-height: 1.9; }
 
 /* ---------- 数字 ---------- */
-.stats-app { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 1rem; }
-.stat {
-  background: var(--white); border: 1px solid var(--cell-line); border-radius: var(--cell-radius);
-  padding: 1.1rem 1.25rem; box-shadow: var(--shadow-s);
+/* 数字のタイルを横に並べるのをやめた。あの並びは何を入れても様になってしまい、
+   見るべき数字が決まっている画面には要らない。1行の要約にする。 */
+.stats-app {
+  display: flex; flex-wrap: wrap; gap: 1.6rem 2.4rem;
+  border-top: 1px solid var(--ink); padding: .9rem .2rem 0;
 }
-.stat .k { font-size: .72rem; letter-spacing: .1em; color: var(--muted); margin-bottom: .5rem; }
+.stat { padding: 0; }
+.stat .k { font-size: .74rem; color: var(--muted); margin-bottom: .15rem; }
 .stat .v {
-  font-family: var(--font-serif); font-size: 1.7rem; font-weight: 500; line-height: 1.15;
-  color: var(--sea-ink); font-variant-numeric: tabular-nums;
+  font-family: var(--font-serif); font-size: 1.2rem; font-weight: 500; line-height: 1.35;
+  color: var(--deep); font-variant-numeric: tabular-nums;
 }
-.stat .v small { font-size: .48em; font-family: var(--font); color: var(--muted); margin-left: .3em; font-weight: 400; }
+.stat .v small { font-size: .62em; font-family: var(--font); color: var(--muted); margin-left: .25em; font-weight: 400; }
 
 /* ---------- 講座 ---------- */
-.lesson {
-  background: var(--white); border: 1px solid var(--cell-line); border-radius: var(--cell-radius);
-  margin-bottom: .8rem; box-shadow: var(--shadow-s); overflow: hidden;
-  transition: box-shadow .35s var(--ease), border-color .35s var(--ease);
-}
-.lesson:hover { box-shadow: var(--shadow); }
-.lesson.locked { background: transparent; border-style: dashed; box-shadow: none; }
-.lesson.locked:hover { box-shadow: none; }
-.lesson-head { display: flex; gap: 1.1rem; align-items: flex-start; padding: 1.2rem 1.4rem; cursor: pointer; }
+.lesson { border-bottom: 1px solid var(--line); }
+.lesson:first-child { border-top: 1px solid var(--ink); }
+.lesson.open { background: var(--white); }
+.lesson-head { display: flex; gap: 1.1rem; align-items: flex-start; padding: 1.15rem .2rem; cursor: pointer; }
+.lesson-head:hover { background: var(--foam); }
 .lesson-head .no { font-family: var(--font-en); font-size: .7rem; letter-spacing: .14em; color: var(--gold-ink); padding-top: .25rem; width: 3.4rem; flex: 0 0 auto; }
 .lesson.locked .no { color: var(--muted); }
 .lesson-head .ti { flex: 1; }
@@ -93,36 +95,34 @@
 .lesson.locked h3 { color: var(--muted); }
 .lesson-head p { font-size: .82rem; color: var(--ink-2); line-height: 1.9; }
 .lesson-head .rt { flex: 0 0 auto; display: flex; gap: .5rem; align-items: center; padding-top: .15rem; }
-.lesson-body { border-top: 1px solid var(--line); padding: 1.5rem 1.4rem; display: none; }
+.lesson-body { border-top: 1px solid var(--line); padding: 1.5rem .2rem 1.8rem; display: none; }
 .lesson.open .lesson-body { display: block; }
 
+/* 動画が入る場所。まだURLが無いので、濃い色で埋めずに空き枠として見せる。
+   それらしいグラデーションを敷くと、中身があるように見えてしまう。 */
 .video-ph {
-  aspect-ratio: 16/9; border-radius: var(--r-m); margin-bottom: 1.4rem;
-  background: linear-gradient(150deg, var(--ocean), var(--deep) 70%);
-  color: var(--on-deep-muted); display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: .55rem; font-size: .78rem; letter-spacing: .06em; text-align: center; padding: 1.2rem;
+  aspect-ratio: 16/9; margin-bottom: 1.4rem; max-height: 22rem;
+  border: 1px dashed var(--ink-3); background: var(--foam);
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: .5rem; font-size: .78rem; text-align: center; padding: 1.2rem;
 }
-.video-ph .big { font-family: var(--font-serif); color: #fff; font-size: 1.1rem; letter-spacing: .1em; }
+.video-ph .big { font-family: var(--font-serif); color: var(--deep); font-size: 1.05rem; letter-spacing: .06em; }
 
 .task-box { background: var(--foam); border: 1px solid var(--line); border-radius: var(--r-m); padding: 1.4rem; }
 .task-box .lbl-h { font-family: var(--font-en); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-ink); margin-bottom: .65rem; }
 .task-box .q { font-size: .89rem; line-height: 2.05; color: var(--ink); margin-bottom: 1.1rem; }
 
 /* ---------- 配信 ---------- */
-.post {
-  background-color: var(--white);
-  background-image: linear-gradient(90deg, var(--gold), var(--gold-2));
-  background-repeat: no-repeat; background-size: var(--cell-rule) 2px; background-position: 1.4rem 0;
-  border: 1px solid var(--cell-line); border-radius: var(--cell-radius);
-  padding: 1.5rem 1.4rem; margin-bottom: .8rem; box-shadow: var(--shadow-s);
-}
+/* 配信も箱に入れない。上端の真鍮色の罫はやめた（全部に付いていて印にならない） */
+.post { padding: 1.5rem .2rem; border-bottom: 1px solid var(--line); }
+.post:first-of-type { border-top: 1px solid var(--ink); }
 .post .meta { display: flex; gap: .6rem; align-items: center; margin-bottom: .8rem; flex-wrap: wrap; }
 .post .dt { font-family: var(--font-en); font-size: .72rem; color: var(--muted); }
 .post h3 { font-family: var(--font-serif); font-size: 1.08rem; font-weight: 500; color: var(--deep); margin-bottom: .7rem; line-height: 1.65; }
 .post .bd { font-size: .88rem; color: var(--ink-2); line-height: 2.05; }
 .post .media {
-  margin-top: 1rem; background: var(--foam); border: 1px solid var(--line); border-radius: var(--r-s);
-  padding: .8rem 1rem; font-size: .78rem; color: var(--muted); display: flex; gap: .65rem; align-items: center;
+  margin-top: 1rem; border-left: 2px solid var(--line);
+  padding: .2rem 0 .2rem .8rem; font-size: .78rem; color: var(--muted); display: flex; gap: .65rem; align-items: center;
 }
 .post .media .mono { color: var(--ocean); font-weight: 600; }
 .expired-note {
@@ -131,13 +131,9 @@
 }
 
 /* ---------- 教材 ---------- */
-.mat {
-  display: flex; gap: 1rem; align-items: center; padding: 1rem 1.2rem;
-  background: var(--white); border: 1px solid var(--cell-line); border-radius: var(--cell-radius);
-  margin-bottom: .6rem; box-shadow: var(--shadow-s);
-  transition: transform .35s var(--ease), box-shadow .35s var(--ease);
-}
-.mat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.mat { display: flex; gap: 1rem; align-items: center; padding: .95rem .2rem; border-bottom: 1px solid var(--line); }
+.mat:first-of-type { border-top: 1px solid var(--ink); }
+.mat:hover { background: var(--foam); }
 .mat .ic {
   width: 34px; height: 42px; border: 1px solid var(--ocean); border-radius: var(--r-xs);
   display: flex; align-items: center; justify-content: center;
@@ -156,7 +152,7 @@
 .hist-item .b { font-size: .86rem; color: var(--ink-2); line-height: 2; white-space: pre-wrap; }
 
 /* ---------- ログイン ---------- */
-.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--foam); }
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--paper); }
 .login-box { width: 100%; max-width: 25rem; }
 .login-box .brand { display: flex; flex-direction: column; align-items: center; gap: .7rem; margin-bottom: 2rem; }
 .login-box .brand__logo { height: 40px; width: auto; }
@@ -173,19 +169,19 @@
 .matrix td:first-child, .matrix th:first-child { text-align: left; }
 .cellmark {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; font-size: .68rem; border: 1px solid var(--line); border-radius: var(--r-xs);
+  width: 22px; height: 22px; font-size: .74rem; border: 0; color: var(--ink-3);
 }
-.cellmark.yes { background: var(--green); color: #fff; border-color: var(--green); }
+.cellmark.yes { color: var(--green); border: 0; }
 .cellmark.no { color: var(--ink-3); border-style: dashed; }
 .cellmark.na { color: var(--ink-3); border-style: dotted; }
 
 .inbox-item {
-  padding: .95rem 1.15rem; background: var(--white); border: 1px solid var(--cell-line);
-  border-radius: var(--r-m); margin-bottom: .5rem; display: flex; gap: 1rem; align-items: flex-start;
-  box-shadow: var(--shadow-s); cursor: pointer; transition: border-color .25s;
+  padding: .95rem .2rem .95rem 0; border-bottom: 1px solid var(--line);
+  display: flex; gap: 1rem; align-items: flex-start; cursor: pointer;
 }
-.inbox-item:hover { border-color: var(--cell-line-hover); }
-.inbox-item.unread { border-left: 3px solid var(--coral); }
+.inbox-item:first-of-type { border-top: 1px solid var(--ink); }
+.inbox-item:hover { background: var(--foam); }
+.inbox-item.unread { padding-left: .7rem; box-shadow: inset 2px 0 0 var(--coral); }
 .inbox-item .tx { flex: 1; }
 .inbox-item h4 { font-size: .88rem; font-weight: 600; color: var(--deep); margin-bottom: .15rem; }
 .inbox-item p { font-size: .82rem; color: var(--ink-2); line-height: 1.85; }

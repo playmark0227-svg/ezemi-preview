@@ -20,14 +20,9 @@
   function head(eyebrow, title, lead) {
     return '<div class="sec-head">' +
       (eyebrow ? '<span class="eyebrow">' + esc(eyebrow) + '</span>' : '') +
-      '<h2 class="ttl-m bar-ttl">' + esc(title) + '</h2>' +
+      '<h2 class="ttl-m">' + esc(title) + '</h2>' +
       (lead ? '<p class="lead">' + nl2br(lead) + '</p>' : '') +
       '</div>';
-  }
-  function stat(num, unit, label) {
-    return '<div class="stat-i"><div class="stat__num">' + esc(num) +
-      (unit ? '<span class="unit">' + esc(unit) + '</span>' : '') + '</div>' +
-      '<div class="stat__label">' + esc(label) + '</div></div>';
   }
 
   /* ---------------- ホーム ---------------- */
@@ -42,21 +37,15 @@
       '<div class="wrap">' +
       '<span class="eyebrow">' + esc(st.company) + '　／　' + esc(st.siteNameNote) + '</span>' +
       '<h1>' + esc(st.tagline) + '</h1>' +
-      '<p class="hero__sub">値上がりする銘柄を教える場所ではありません。目の前に流れてきた金融の話が、' +
-      'どこまで確かめられるものなのか。その手順だけを、7回の講座と毎週の実践で身につけます。</p>' +
+      '<p class="hero__sub">どの銘柄が上がるかは扱いません。' +
+      '目の前に流れてきた金融の話を、どこまで確かめられるのか。その手順を7回の講座で覚えて、' +
+      'あとは毎週やってみるだけの場所です。</p>' +
       '<div class="hero__acts">' +
       '<a href="#/join" class="btn btn-fill">入会する</a>' +
       '<a href="#/reports" class="btn btn-ghost">公開レポートを読む</a>' +
       '</div>' +
       '<p class="hero__note">入会金 ' + R.fmtYen(st.priceInitial) + '（税込）＋ 月額 ' + R.fmtYen(st.priceMonthly) +
       '（税込）／縛りなし・会員ページからいつでも解約できます</p>' +
-      '<hr class="hero__rule">' +
-      '<div class="stats">' +
-      stat(db.lessons.length, '回', '入門講座') +
-      stat('週2〜3', '', '会員限定配信') +
-      stat('週1', '本', 'レポート提出') +
-      stat(st.archiveWindowDays, '日', '配信の掲載期間') +
-      '</div>' +
       '</div></section>';
 
     html += '<div class="notice-band"><div class="wrap"><p>' +
@@ -66,15 +55,15 @@
       '</p></div></div>';
 
     html += sec(
-      head('進めかた', '入って、確かめて、書く。', 'この3つを繰り返すだけです。順番は固定されていて、飛ばせません。') +
+      head('', '毎週やること', 'この3つの繰り返しです。順番は決まっていて、飛ばせません。') +
       '<div class="steps">' +
       '<div class="step"><h3>7回の入門講座</h3><p>検証の手順を1回ずつ。各回の最後に課題があり、出すとその場で次の回が開きます。承認待ちはありません。</p></div>' +
       '<div class="step"><h3>週2〜3回の会員限定配信</h3><p>いま流れている情報を題材に、実際に確かめる過程をそのまま流します。直近1ヶ月ぶんが読めます。</p></div>' +
       '<div class="step"><h3>週1回のレポート提出</h3><p>自分で選んだ題材を、主張・根拠・限界の型で書きます。配信で取り上げることもあります（許諾制）。</p></div>' +
-      '</div>', 'sec--tint');
+      '</div>');
 
     html += sec(
-      head('入門講座', '7回で、確かめる順番が身につく。') +
+      head('', '入門講座（全7回）', '確かめる順番を、1回にひとつずつ。') +
       '<div class="curriculum">' +
       db.lessons.map(function (l) {
         return '<div class="cur-row">' +
@@ -87,14 +76,14 @@
 
     var reps = db.publicReports.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); }).slice(0, 3);
     html += sec(
-      head('公開レポート', '会員がどんなものを書いているか。', '実際に提出されたレポートと同じ型で書かれたものを公開しています。') +
+      head('', '公開レポート', '会員が毎週出しているものと同じ型で書いたレポートを、いくつか公開しています。') +
       '<div class="rep-list">' + reps.map(repItem).join('') + '</div>' +
       '<div style="margin-top:2rem"><a href="#/reports" class="btn btn-ghost btn-s">すべての公開レポート</a></div>', 'sec--tint');
 
-    html += sec(head('料金', '入会金と月額だけ。') + priceBlock());
+    html += sec(head('', '料金') + priceBlock());
 
     html += '<section class="line-cta"><div class="wrap">' +
-      '<h2>まずLINEで様子を見る</h2>' +
+      '<h2>LINEで様子を見る</h2>' +
       '<p>友だち追加をすると、スクールの案内と、公開レポートの更新をお送りします。入会していない方への配信と会員向けの配信は分けています。</p>' +
       '<a href="' + esc(st.lineUrl) + '" class="btn btn-fill" target="_blank" rel="noopener">LINE公式アカウントを友だち追加</a>' +
       '</div></section>';
@@ -104,10 +93,10 @@
 
   function repItem(r) {
     return '<a class="rep-item" href="#/report/' + esc(r.slug) + '">' +
-      '<div class="meta"><span class="tag">' + esc(r.category) + '</span>' +
-      '<span class="dt">' + R.fmtDate(new Date(r.date).getTime()) + '</span></div>' +
-      '<h3>' + esc(r.title) + '</h3><p>' + esc(r.lead) + '</p>' +
-      '<span class="more">続きを読む →</span></a>';
+      '<div class="meta"><span class="dt">' + R.fmtDate(new Date(r.date).getTime()) + '</span>' +
+      '<span class="tag">' + esc(r.category) + '</span></div>' +
+      '<div><h3>' + esc(r.title) + '</h3><p>' + esc(r.lead) + '</p></div>' +
+      '</a>';
   }
 
   function priceBlock() {
@@ -126,14 +115,9 @@
 
   /* ---------------- 公開レポート一覧・詳細 ---------------- */
   function viewReports() {
-    var cats = {};
-    db.publicReports.forEach(function (r) { cats[r.category] = 1; });
     return sec(
-      head('公開レポート', 'ここで書かれているもの。',
+      head('', '公開レポート',
         '会員が毎週提出するレポートと同じ型で書いています。主張・根拠・限界の3つに分けるところまでが1本です。') +
-      '<div class="row" style="margin-bottom:1.6rem">' +
-      Object.keys(cats).map(function (c) { return '<span class="tag">' + esc(c) + '</span>'; }).join('') +
-      '</div>' +
       '<div class="rep-list">' +
       db.publicReports.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); }).map(repItem).join('') +
       '</div>');
@@ -159,7 +143,7 @@
   function viewStory() {
     return '<section class="sec"><div class="wrap-narrow">' +
       '<span class="eyebrow">' + esc(db.settings.company) + '</span>' +
-      '<h1 class="ttl-l bar-ttl">' + esc(db.story.title) + '</h1>' +
+      '<h1 class="ttl-l">' + esc(db.story.title) + '</h1>' +
       '<div class="prose">' + db.story.paragraphs.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') +
       '<p class="sig">' + esc(db.settings.representative) + '</p></div>' +
       '</div></section>';
@@ -167,14 +151,14 @@
 
   /* ---------------- 料金 ---------------- */
   function viewPrice() {
-    return sec(head('料金', '入会金と月額だけ。') + priceBlock() +
+    return sec(head('', '料金') + priceBlock() +
       '<div style="margin-top:2.4rem"><a href="#/join" class="btn btn-fill">入会する</a></div>');
   }
 
   /* ---------------- 法定表記 ---------------- */
   function viewTokushoho() {
     return '<section class="sec"><div class="wrap-narrow">' +
-      '<h1 class="ttl-m bar-ttl">特定商取引法に基づく表記</h1>' +
+      '<h1 class="ttl-m">特定商取引法に基づく表記</h1>' +
       '<table class="legal-tbl"><tbody>' +
       db.legal.tokushoho.map(function (row) { return '<tr><th>' + esc(row[0]) + '</th><td>' + esc(row[1]) + '</td></tr>'; }).join('') +
       '</tbody></table>' +
@@ -183,14 +167,14 @@
   }
   function viewTerms() {
     return '<section class="sec"><div class="wrap-narrow">' +
-      '<h1 class="ttl-m bar-ttl">利用規約</h1>' +
+      '<h1 class="ttl-m">利用規約</h1>' +
       db.legal.terms.map(function (a) { return '<div class="legal-art"><h3>' + esc(a.h) + '</h3><p>' + esc(a.p) + '</p></div>'; }).join('') +
       '<p class="small muted" style="margin-top:22px">※ 文言は当方支給のものに差し替えます。</p>' +
       '</div></section>';
   }
   function viewPrivacy() {
     return '<section class="sec"><div class="wrap-narrow">' +
-      '<h1 class="ttl-m bar-ttl">プライバシーポリシー</h1>' +
+      '<h1 class="ttl-m">プライバシーポリシー</h1>' +
       db.legal.privacy.map(function (a) { return '<div class="legal-art"><h3>' + esc(a.h) + '</h3><p>' + esc(a.p) + '</p></div>'; }).join('') +
       '<p class="small muted" style="margin-top:22px">※ 文言は当方支給のものに差し替えます。</p>' +
       '</div></section>';
@@ -200,7 +184,7 @@
   function viewJoin() {
     var st = db.settings;
     return sec(
-      head('入会', '申込から会員ページまで、そのまま続きます。', 'お支払いが終わった時点で会員ページが開きます。事務局の手作業は入りません。') +
+      head('', '入会のお手続き', 'お支払いが終わった時点で会員ページが開きます。事務局の手作業は入りません。') +
       '<div class="signup-grid">' +
       '<div class="signup-form">' +
       '<label class="field"><span class="lbl">お名前</span><input type="text" id="f-name" placeholder="山田 太郎" autocomplete="name"></label>' +
@@ -354,7 +338,7 @@
     var html, m;
     if ((m = h.match(/^\/report\/(.+)$/))) html = viewReport(m[1]);
     else if (routes[h]) html = routes[h]();
-    else html = sec('<h1 class="ttl-m bar-ttl">ページが見つかりません</h1><a href="#/" class="btn btn-ghost btn-s">トップへ</a>');
+    else html = sec('<h1 class="ttl-m">ページが見つかりません</h1><a href="#/" class="btn btn-ghost btn-s">トップへ</a>');
 
     $('#view').innerHTML = html;
     window.scrollTo(0, 0);
