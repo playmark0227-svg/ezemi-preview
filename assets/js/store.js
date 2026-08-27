@@ -44,7 +44,7 @@
     var seed = EZ.buildSeed(Date.now());
     /* cloud では会員も配信もサーバから来る。器だけ用意しておく */
     ['members', 'assignments', 'reports', 'questions', 'impressions',
-      'posts', 'payments', 'notifications', 'adminInbox'].forEach(function (k) { seed[k] = []; });
+      'posts', 'payments', 'notifications', 'adminInbox', 'messages'].forEach(function (k) { seed[k] = []; });
     return seed;
   }
 

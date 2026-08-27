@@ -204,3 +204,33 @@
   .mobile-head .brand__logo { height: 22px; width: auto; }
   .main { padding: 1.4rem 1.2rem 7rem; }
 }
+
+/* ---------- メッセージ ----------
+   吹き出しは使わない。往復書簡のように、送り主と日時を見出しにして縦に並べる。
+   吹き出しを左右に振ると、それだけでチャットアプリの見た目になってしまう。 */
+.thread { border-top: 1px solid var(--ink); }
+.msg { padding: 1.15rem .2rem; border-bottom: 1px solid var(--line); }
+.msg-head { display: flex; gap: .8rem; align-items: baseline; margin-bottom: .5rem; flex-wrap: wrap; }
+.msg-head .who { font-size: .84rem; font-weight: 600; color: var(--deep); }
+.msg-head .dt { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.msg-body { font-size: .89rem; color: var(--ink-2); line-height: 2.05; white-space: pre-wrap; }
+
+/* 自分が送ったぶんは、左に細い罫を立てて一段下げる */
+.msg--mine { padding-left: 1rem; border-left: 2px solid var(--gold); background: var(--foam); }
+.msg--mine .msg-head .who { color: var(--gold-ink); }
+
+/* ---------- メッセージの一覧（管理画面） ---------- */
+/* 見出しの右に置くスイッチが、幅の狭い画面で切れないように折り返す */
+.row-between > .check { min-width: 0; flex-wrap: wrap; }
+
+.thread-list { border-top: 1px solid var(--ink); margin-bottom: 2rem; }
+.thread-row {
+  display: flex; gap: 1rem; align-items: baseline; justify-content: space-between;
+  padding: 1rem .2rem; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.thread-row:hover { background: var(--foam); }
+.thread-row .tx { flex: 1; min-width: 0; }
+.thread-row .h { display: flex; gap: .6rem; align-items: center; margin-bottom: .2rem; }
+.thread-row .h strong { font-size: .92rem; color: var(--deep); }
+.thread-row p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-row .dt { font-size: .72rem; color: var(--muted); white-space: nowrap; }

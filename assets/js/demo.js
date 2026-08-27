@@ -48,6 +48,21 @@
     { ago: -2, kind: '配信', title: '（予約投稿）決算資料の読む順番', body: '前から読まないこと。読む順番を決めておくと時間が半分になります。', media: 'video' }
   ];
 
+  var MESSAGES = [
+
+    { who: 0, from: 'member', ago: 5, body: '第3回の課題で、利害の見つけ方がうまくいきませんでした。\n発信者が会社の場合、どこを見れば「誰が得をするか」が分かるのでしょうか。' },
+
+    { who: 0, from: 'admin',  ago: 4, body: 'まず、その会社が何で売上を立てているかを見てください。\n上場していれば決算資料の「セグメント別売上」に出ています。\nそこに載っている事業と、記事で薦めているものが重なっていれば、それが利害です。' },
+
+    { who: 0, from: 'member', ago: 1, body: 'ありがとうございます。セグメントで見たら分かりました。\nもうひとつ、非上場の場合はどう調べればよいですか。' },
+
+    { who: 2, from: 'member', ago: 9, body: '仕事が立て込んでいて、今週のレポートを出せそうにありません。すみません。' },
+
+    { who: 2, from: 'admin',  ago: 9, body: '大丈夫です。出せる週に出してください。\n溜めてまとめて書くより、1本でも間を空けずに続けるほうが身につきます。' }
+
+  ];
+
+
   var QUESTIONS = [
     { ago: 12, who: 1, body: '「登録済み」と書いてある会社でも注意が必要なことはありますか。' },
     { ago: 4, who: 0, body: '一次情報が有料の場合、どこまで確かめれば「確かめた」と言えますか。' }
@@ -147,6 +162,20 @@
         db.questions.unshift({ id: S.uid('q'), memberId: m.id, memberName: m.name, body: q.body, at: now - q.ago * DAY, answeredPostId: null });
       });
 
+      /* メッセージ（会員 ⇄ 代表） */
+      db.messages = db.messages || [];
+      MESSAGES.forEach(function (x) {
+        var m = db.members[x.who];
+        if (!m) return;
+        if (db.messages.some(function (y) { return y.body === x.body; })) return;
+        db.messages.push({
+          id: S.uid('msg'), memberId: m.id, memberName: m.name,
+          from: x.from, body: x.body, at: now - x.ago * DAY, isDemo: true
+        });
+      });
+      /* 佐藤さんの分だけ、代表がまだ読んでいない状態にしておく */
+      if (db.members[0]) db.members[0].adminMsgReadAt = 0;
+
       db.adminInbox.unshift({ id: S.uid('i'), title: 'デモデータを入れました', body: '中身を見るための仮データです。管理画面の「データ」から一括で消せます。', at: now, read: false });
       return true;
     });
@@ -162,6 +191,7 @@
       db.reports = db.reports.filter(notDemo);
       db.questions = db.questions.filter(notDemo);
       db.impressions = db.impressions.filter(notDemo);
+      db.messages = (db.messages || []).filter(notDemo);
       db.payments = db.payments.filter(notDemo);
       db.notifications = db.notifications.filter(function (n) { return !n.memberId || demoIds.indexOf(n.memberId) < 0; });
       db.posts = db.posts.filter(function (p) { return !p.isDemo; });

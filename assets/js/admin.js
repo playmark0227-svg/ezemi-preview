@@ -80,6 +80,7 @@
     { id: 'home', label: 'ホーム', grp: '毎日' },
     { id: 'members', label: '会員一覧', grp: '毎日' },
     { id: 'posts', label: '配信の投稿・予約', grp: '毎日' },
+    { id: 'messages', label: 'メッセージ', grp: '毎日' },
     { id: 'submissions', label: '課題・レポート・質問', grp: '毎日' },
     { id: 'content', label: '動画・教材・公開ページ', grp: 'ときどき' },
     { id: 'pricing', label: '料金・クーポン', grp: 'ときどき' },
@@ -91,11 +92,14 @@
     var now = S.clock.now();
     var unread = db.adminInbox.filter(function (i) { return !i.read; }).length;
     var pending = db.questions.filter(function (q) { return !q.answeredPostId; }).length;
+    var msgUnread = R.totalUnreadForAdmin(db);
     var lastGrp = '';
     var nav = NAV.map(function (n) {
       var out = '';
       if (n.grp !== lastGrp) { lastGrp = n.grp; out += '<div class="side-grp">' + esc(n.grp) + '</div>'; }
-      var badge = n.id === 'home' && unread ? unread : (n.id === 'submissions' && pending ? pending : 0);
+      var badge = n.id === 'home' ? unread
+        : n.id === 'messages' ? msgUnread
+        : n.id === 'submissions' ? pending : 0;
       out += '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '"><span>' + esc(n.label) + '</span>' +
         (badge ? '<span class="n">' + badge + '</span>' : '') + '</a>';
       return out;
@@ -138,6 +142,7 @@
       '<div class="stat"><div class="k">支払いに問題</div><div class="v">' + pastDue.length + '<small>名</small></div></div>' +
       '<div class="stat"><div class="k">解約予定</div><div class="v">' + canceling.length + '<small>名</small></div></div>' +
       '<div class="stat"><div class="k">今週のレポート</div><div class="v">' + thisWeekReports + '<small>/ ' + active.length + '</small></div></div>' +
+      '<div class="stat"><div class="k">未読メッセージ</div><div class="v">' + R.totalUnreadForAdmin(db) + '<small>件</small></div></div>' +
       '</div>';
 
     h += '<div class="row-between" style="margin-bottom:14px"><h2 class="ttl-s">届いていること</h2>' +
@@ -282,6 +287,7 @@
       '<button class="btn btn-ghost btn-s" data-togglefail="' + m.id + '">' +
       (m.billing.forceFail ? '決済の失敗を止める' : '次回の決済を失敗させる（検証用）') + '</button>' +
       (m.billing.state === 'past_due' ? '<button class="btn btn-ghost btn-s" data-retry="' + m.id + '">いますぐ再決済</button>' : '') +
+      '<button class="btn btn-ghost btn-s" data-msg="' + m.id + '">メッセージを送る</button>' +
       '<button class="btn btn-danger btn-s" data-force="' + m.id + '">強制解約</button>' +
       '</div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:26px"><button class="btn btn-ghost btn-s" data-close>閉じる</button></div>';
@@ -308,6 +314,14 @@
     });
     var rt = $('[data-retry]', mod);
     if (rt) rt.addEventListener('click', function () { R.retryNow(m.id); R.refresh(); mod.close(); rerender(); U.toast('再決済しました'); });
+    var mg = $('[data-msg]', mod);
+    if (mg) mg.addEventListener('click', function () {
+      openThread = mg.dataset.msg;
+      mod.close();
+      page = 'messages';
+      location.hash = 'messages';
+      rerender();
+    });
     var fc = $('[data-force]', mod);
     if (fc) fc.addEventListener('click', function () {
       U.confirmBox('強制解約しますか', esc(m.name) + ' さんの会員資格をすぐに終了します。\n閲覧はその時点で止まります。', '強制解約する').then(function (ok) {
@@ -503,6 +517,121 @@
           R.refresh(); mod.close(); rerender(); U.toast('配信し、会員へ通知しました');
         });
       });
+    });
+  }
+
+  /* ================= メッセージ ================= */
+  var openThread = null;   /* 開いている会員のID。null なら一覧 */
+
+  function viewMessages() {
+    if (openThread) return viewThread(openThread);
+
+    var open = db.settings.messagesOpen !== false;
+    var rows = R.messageThreads(db);
+    var withMsg = rows.filter(function (r) { return r.count > 0; });
+    var without = rows.filter(function (r) { return r.count === 0; });
+
+    var h = pagehead('メッセージ',
+      '会員おひとりずつとのやりとりです。ここでの内容は他の会員には見えません。');
+
+    h += '<div class="row-between" style="margin-bottom:1.4rem">' +
+      '<span class="small muted">' +
+      (R.totalUnreadForAdmin(db) ? '未読 ' + R.totalUnreadForAdmin(db) + '件' : '未読はありません') + '</span>' +
+      '<label class="check"><input type="checkbox" id="m-open"' + (open ? ' checked' : '') + '>' +
+      '<span>会員からの受付をひらく</span></label></div>';
+    if (!open) {
+      h += '<div class="card-flat" style="margin-bottom:1.4rem"><p class="small muted">' +
+        'いま受付を止めています。会員の画面には「受付を止めています」と出て、送信できません。' +
+        'こちらからの返信は止まりません。</p></div>';
+    }
+
+    h += '<h2 class="ttl-s">やりとりのある会員（' + withMsg.length + '名）</h2>';
+    h += withMsg.length ? '<div class="thread-list">' + withMsg.map(threadRow).join('') + '</div>'
+      : '<p class="small muted">まだありません。</p>';
+
+    if (without.length) {
+      h += '<h2 class="ttl-s">まだやりとりのない会員（' + without.length + '名）</h2>' +
+        '<div class="thread-list">' + without.map(threadRow).join('') + '</div>';
+    }
+    return h;
+  }
+
+  function threadRow(r) {
+    var last = r.last;
+    return '<div class="thread-row" data-thread="' + r.member.id + '">' +
+      '<div class="tx">' +
+      '<div class="h"><strong>' + esc(r.member.name) + '</strong>' +
+      (r.unread ? '<span class="tag tag-alert">未読 ' + r.unread + '</span>' : '') +
+      '</div>' +
+      '<p class="small muted">' +
+      (last ? (last.from === 'admin' ? '（こちらから）' : '') + esc(last.body.slice(0, 46)) +
+        (last.body.length > 46 ? '…' : '') : 'まだやりとりがありません') +
+      '</p></div>' +
+      '<span class="dt">' + (last ? R.ago(last.at, S.clock.now()) : '—') + '</span>' +
+      '</div>';
+  }
+
+  function viewThread(memberId) {
+    var m = db.members.filter(function (x) { return x.id === memberId; })[0];
+    if (!m) { openThread = null; return viewMessages(); }
+    R.markMessagesReadByAdmin(memberId);   /* 開いた時点で既読に */
+    var st = R.statusOf(m, S.clock.now());
+    var thread = R.threadOf(db, memberId);
+
+    var h = '<div class="pagehead">' +
+      '<a href="#messages" id="m-back" class="small muted" style="display:inline-block;margin-bottom:.8rem">← メッセージ一覧へ</a>' +
+      '<div class="row-between"><h1 class="ttl-m">' + esc(m.name) + '</h1>' +
+      '<span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></div>' +
+      '<p>' + esc(m.email) + '　／　入会 ' + R.fmtDate(m.joinedAt) +
+      '　／　講座 ' + R.progressLabel(db, m).submitted + '/' + R.progressLabel(db, m).total + '回</p></div>';
+
+    h += thread.length
+      ? '<div class="thread">' + thread.map(function (x) { return adminMsgRow(x, m); }).join('') + '</div>'
+      : '<p class="small muted" style="border-top:1px solid var(--ink);padding-top:1.2rem">まだやりとりはありません。</p>';
+
+    h += '<div style="margin-top:2rem">' +
+      '<label class="field"><span class="lbl">' + esc(m.name) + ' さんへ返信</span>' +
+      '<textarea id="t-body" placeholder="ここに書いて送ります。"></textarea></label>' +
+      '<div class="row"><button class="btn btn-fill" id="t-send">送る</button>' +
+      '<span class="small muted">送ると本人にメール（とLINE）でお知らせが飛びます。</span></div></div>';
+    return h;
+  }
+
+  function adminMsgRow(x, m) {
+    var mine = x.from === 'admin';
+    return '<div class="msg' + (mine ? ' msg--mine' : '') + '">' +
+      '<div class="msg-head">' +
+      '<span class="who">' + (mine ? esc(db.settings.representative) + '（自分）' : esc(m.name)) + '</span>' +
+      '<span class="dt">' + R.fmtDateTime(x.at) + '</span></div>' +
+      '<div class="msg-body">' + nl2br(x.body) + '</div></div>';
+  }
+
+  function bindMessages() {
+    var t = $('#m-open');
+    if (t) t.addEventListener('change', function () {
+      R.setMessagesOpen(t.checked);
+      U.toast(t.checked ? '受付をひらきました' : '受付を止めました');
+      rerender();
+    });
+    $$('[data-thread]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        openThread = el.dataset.thread;
+        rerender();
+      });
+    });
+    var back = $('#m-back');
+    if (back) back.addEventListener('click', function (e) {
+      e.preventDefault(); openThread = null; rerender();
+    });
+    var send = $('#t-send');
+    if (send) send.addEventListener('click', function () {
+      var body = $('#t-body').value.trim();
+      if (body.length < 2) return U.toast('本文を入れてください');
+      try {
+        R.sendMessage(openThread, 'admin', body);
+        U.toast('送りました');
+        rerender();
+      } catch (e) { U.toast(e.message, 'alert'); }
     });
   }
 
@@ -861,7 +990,7 @@
 
   /* ================= 描画 ================= */
   var VIEWS = {
-    home: viewHome, members: viewMembers, posts: viewPosts, submissions: viewSubmissions,
+    home: viewHome, members: viewMembers, posts: viewPosts, messages: viewMessages, submissions: viewSubmissions,
     content: viewContent, pricing: viewPricing, notifications: viewNotifications, data: viewData
   };
 
@@ -873,6 +1002,7 @@
     if (page === 'home') bindHome();
     if (page === 'members') bindMembers();
     if (page === 'posts') bindPosts();
+    if (page === 'messages') bindMessages();
     if (page === 'submissions') bindSubmissions();
     if (page === 'content') bindContent();
     if (page === 'pricing') bindPricing();
@@ -937,7 +1067,7 @@
   window.addEventListener('hashchange', function () {
     var p = location.hash.replace(/^#/, '') || 'home';
     var allowed = S.mode() === 'cloud' ? signedIn : sessionStorage.getItem(PASS_KEY) === '1';
-    if (VIEWS[p] && allowed) { page = p; rerender(); }
+    if (VIEWS[p] && allowed) { if (p !== 'messages') openThread = null; page = p; rerender(); }
   });
 
   /* ---------- 本番（Firebase）の起動 ---------- */

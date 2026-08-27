@@ -562,6 +562,131 @@
     }).join('\r\n');
   }
 
+  /* ============================================================
+     メッセージ（会員 ⇄ 代表の1対1）
+
+     ・公開の質問フォーム（D-3）とは別物。あちらは配信で公開回答する用。
+     ・既読はメッセージ1通ずつではなく「どこまで読んだか」の時刻で持つ。
+       1通ごとに書き込むと、開くたびに書き込みが走って重くなる。
+         会員側 … members/{uid}.flags.msgReadAt（本人が書ける）
+         代表側 … members/{uid}.adminMsgReadAt（管理者しか書けない）
+     ============================================================ */
+
+  /** その会員のやりとりを古い順に */
+  function threadOf(db, memberId) {
+    return (db.messages || [])
+      .filter(function (m) { return m.memberId === memberId; })
+      .sort(function (a, b) { return a.at - b.at; });
+  }
+
+  /** 会員から見た未読（代表が送ったもののうち、まだ読んでいない数） */
+  function unreadForMember(db, member) {
+    if (!member) return 0;
+    var since = (member.flags && member.flags.msgReadAt) || 0;
+    return threadOf(db, member.id).filter(function (m) {
+      return m.from === 'admin' && m.at > since;
+    }).length;
+  }
+
+  /** 代表から見た未読（その会員が送ったもののうち、まだ読んでいない数） */
+  function unreadForAdmin(db, member) {
+    if (!member) return 0;
+    var since = member.adminMsgReadAt || 0;
+    return threadOf(db, member.id).filter(function (m) {
+      return m.from === 'member' && m.at > since;
+    }).length;
+  }
+
+  /** 管理画面の一覧用。やりとりのある人を新しい順に。 */
+  function messageThreads(db) {
+    return db.members.map(function (m) {
+      var t = threadOf(db, m.id);
+      var last = t[t.length - 1] || null;
+      return {
+        member: m,
+        count: t.length,
+        last: last,
+        lastAt: last ? last.at : 0,
+        unread: unreadForAdmin(db, m)
+      };
+    }).sort(function (a, b) {
+      if (b.unread !== a.unread) return b.unread - a.unread;
+      return b.lastAt - a.lastAt;
+    });
+  }
+
+  function totalUnreadForAdmin(db) {
+    return db.members.reduce(function (n, m) { return n + unreadForAdmin(db, m); }, 0);
+  }
+
+  /** 送る。from は 'member' か 'admin'。 */
+  function sendMessage(memberId, from, body) {
+    return S.update(function (db) {
+      var m = db.members.filter(function (x) { return x.id === memberId; })[0];
+      if (!m) throw new Error('会員が見つかりません');
+      body = (body || '').trim();
+      if (!body) throw new Error('本文を入れてください');
+      if (from === 'member') {
+        if (!canView(m, S.clock.now())) throw new Error('いまはメッセージを送れません');
+        if (db.settings.messagesOpen === false) throw new Error('いまメッセージの受付を止めています');
+      }
+      var msg = {
+        id: S.uid('msg'), memberId: memberId, memberName: m.name,
+        from: from, body: body, at: S.clock.now()
+      };
+      db.messages = db.messages || [];
+      db.messages.push(msg);
+      S.put('messages', msg);
+
+      if (from === 'member') {
+        notifyAdmin(db, 'メッセージ', m.name + ' さんからメッセージが届きました。', { memberId: memberId });
+      } else {
+        /* 代表が送ったぶんは、本人に届いたことを知らせる */
+        notifyMember(db, m, '事務局からメッセージが届いています',
+          '会員ページの「メッセージ」からご確認ください。');
+        m.adminMsgReadAt = msg.at;   /* 自分で返したので、そこまでは読んだことになる */
+        S.put('members', m);
+      }
+      return msg;
+    });
+  }
+
+  /** 会員が開いたとき */
+  function markMessagesReadByMember(memberId) {
+    return S.update(function (db) {
+      var m = db.members.filter(function (x) { return x.id === memberId; })[0];
+      if (!m) return 0;
+      var t = threadOf(db, memberId);
+      var last = t.length ? t[t.length - 1].at : 0;
+      if ((m.flags.msgReadAt || 0) >= last) return 0;
+      m.flags.msgReadAt = last;
+      S.put('members', m);
+      return 1;
+    });
+  }
+
+  /** 代表が開いたとき */
+  function markMessagesReadByAdmin(memberId) {
+    return S.update(function (db) {
+      var m = db.members.filter(function (x) { return x.id === memberId; })[0];
+      if (!m) return 0;
+      var t = threadOf(db, memberId);
+      var last = t.length ? t[t.length - 1].at : 0;
+      if ((m.adminMsgReadAt || 0) >= last) return 0;
+      m.adminMsgReadAt = last;
+      S.put('members', m);
+      return 1;
+    });
+  }
+
+  function setMessagesOpen(open) {
+    return S.update(function (db) {
+      db.settings.messagesOpen = !!open;
+      S.put('settings', db.settings);
+      return db.settings.messagesOpen;
+    });
+  }
+
   EZ.rules = {
     addMonths: addMonths, fmtDate: fmtDate, fmtDateShort: fmtDateShort, fmtDateTime: fmtDateTime,
     fmtYen: fmtYen, ago: ago, daysLeft: daysLeft, weekKey: weekKey, recentWeeks: recentWeeks,
@@ -573,6 +698,10 @@
     submitReport: submitReport, reportMatrix: reportMatrix, submitQuestion: submitQuestion,
     POST_KINDS: POST_KINDS, createPost: createPost, postVisibility: postVisibility, visiblePosts: visiblePosts,
     cancelSelf: cancelSelf, undoCancel: undoCancel, forceCancel: forceCancel, refund: refund, retryNow: retryNow,
-    notifyMember: notifyMember, notifyAdmin: notifyAdmin, toCSV: toCSV
+    notifyMember: notifyMember, notifyAdmin: notifyAdmin, toCSV: toCSV,
+    threadOf: threadOf, unreadForMember: unreadForMember, unreadForAdmin: unreadForAdmin,
+    messageThreads: messageThreads, totalUnreadForAdmin: totalUnreadForAdmin,
+    sendMessage: sendMessage, markMessagesReadByMember: markMessagesReadByMember,
+    markMessagesReadByAdmin: markMessagesReadByAdmin, setMessagesOpen: setMessagesOpen
   };
 })(window);

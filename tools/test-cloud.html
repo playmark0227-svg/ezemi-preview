@@ -107,6 +107,37 @@ pre{white-space:pre-wrap;margin:0}
     ok('停止中は読めない', !R.canView(m2, now));
     ok('本番では時計を動かせない', S.clock.offset() === 0);
 
+    head('■ メッセージ（会員 ⇄ 代表）');
+    R.sendMessage(mem.id, 'member', '第3回でつまずきました。相談させてください。');
+    await S.flush();
+    var th = R.threadOf(S.read(), mem.id);
+    ok('会員が送れる', th.length === 1 && th[0].from === 'member');
+    ok('Firestore に書かれた', Object.keys(C._docs()).some(function (k) { return k.indexOf('messages/') === 0; }));
+    ok('代表から見て未読1件', R.unreadForAdmin(S.read(), S.read().members[0]) === 1);
+    ok('会員から見た未読は0件', R.unreadForMember(S.read(), S.read().members[0]) === 0);
+
+    R.markMessagesReadByAdmin(mem.id);
+    await S.flush();
+    ok('代表が開くと未読が消える', R.unreadForAdmin(S.read(), S.read().members[0]) === 0);
+
+    R.sendMessage(mem.id, 'admin', 'ご相談ありがとうございます。まず決算資料を見てください。');
+    await S.flush();
+    ok('代表から返信できる', R.threadOf(S.read(), mem.id).length === 2);
+    ok('会員から見て未読1件', R.unreadForMember(S.read(), S.read().members[0]) === 1);
+    R.markMessagesReadByMember(mem.id);
+    await S.flush();
+    ok('会員が開くと未読が消える', R.unreadForMember(S.read(), S.read().members[0]) === 0);
+
+    R.setMessagesOpen(false);
+    var blocked = false;
+    try { R.sendMessage(mem.id, 'member', '受付が止まっているとき'); } catch (e) { blocked = true; }
+    ok('受付を止めると会員は送れない', blocked);
+    var adminStillOk = true;
+    try { R.sendMessage(mem.id, 'admin', '止めていてもこちらからは送れる'); } catch (e) { adminStillOk = false; }
+    ok('止めていても代表からは送れる', adminStillOk);
+    R.setMessagesOpen(true);
+    await S.flush();
+
     head('■ 管理者');
     var admin = await C.signUp('admin@example.com', 'password123', '管理者');
     ok('管理者は最初は権限なし', !(await C.isAdmin(admin.uid)));

@@ -143,6 +143,7 @@
     { id: 'materials', label: '教材ダウンロード' },
     { id: 'reports', label: '週1レポート' },
     { id: 'questions', label: '質問' },
+    { id: 'messages', label: 'メッセージ' },
     { id: 'account', label: 'アカウント' }
   ];
 
@@ -155,8 +156,10 @@
       '<a class="brand" href="index.html"><picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture><span class="brand__sub">' + esc(db.settings.siteName) + '<small>会員ページ</small></span></a>' +
       '<div class="side-grp">メニュー</div>' +
       NAV.map(function (n) {
+        var unread = n.id === 'messages' ? R.unreadForMember(db, me) : 0;
         return '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '">' +
-          '<span>' + esc(n.label) + '</span></a>';
+          '<span>' + esc(n.label) + '</span>' +
+          (unread ? '<span class="n">' + unread + '</span>' : '') + '</a>';
       }).join('') +
       '<div class="side-foot">' +
       '<div class="who">' + esc(me.name) + '</div>' +
@@ -199,6 +202,7 @@
     var wk = R.weekKey(now);
     var thisWeekReport = db.reports.filter(function (r) { return r.memberId === me.id && r.weekKey === wk; })[0];
     var newPosts = R.visiblePosts(db, now).filter(function (p) { return now - p.publishAt < 7 * EZ.DAY; });
+    var unreadMsg = R.unreadForMember(db, me);
 
     var h = pagehead('こんにちは、' + me.name + 'さん',
       '今週やることは下の3つです。上から順に進めれば大丈夫です。');
@@ -220,6 +224,14 @@
       '<p>配信は公開から' + db.settings.archiveWindowDays + '日で自動的に読めなくなります。</p></div>' +
       (newPosts.length ? '<a class="btn btn-ghost btn-s" href="#feed">読む</a>' : '') + '</div>';
     h += '</div>';
+
+    if (unreadMsg) {
+      h += '<div class="card" style="margin-bottom:1.6rem;border-color:var(--gold)">' +
+        '<div class="row-between"><div>' +
+        '<h3 class="ttl-s" style="margin-bottom:.3rem">事務局からメッセージが' + unreadMsg + '件届いています</h3>' +
+        '<p class="small muted">まだ読んでいないものがあります。</p></div>' +
+        '<a class="btn btn-ghost btn-s" href="#messages">読む</a></div></div>';
+    }
 
     h += '<div class="stats-app" style="margin-bottom:30px">' +
       '<div class="stat"><div class="k">講座の進み</div><div class="v">' + prog.submitted + '<small>/ ' + prog.total + ' 回</small></div></div>' +
@@ -500,6 +512,62 @@
     });
   }
 
+  /* ================= メッセージ ================= */
+  function viewMessages() {
+    var now = S.clock.now();
+    /* 開いた時点で既読にする。描画のあとだと、見ている間じゅう
+       メニューに未読の数が出たままになる。 */
+    R.markMessagesReadByMember(me.id);
+    var open = db.settings.messagesOpen !== false;
+    var thread = R.threadOf(db, me.id);
+    var h = pagehead('メッセージ',
+      '事務局とのやりとりです。ここでの内容は他の会員には見えません。\n' +
+      '配信で取り上げてほしくない相談は、質問フォームではなくこちらへどうぞ。');
+    h += blockedNotice();
+    if (!R.canView(me, now)) return h;
+
+    h += thread.length
+      ? '<div class="thread">' + thread.map(msgRow).join('') + '</div>'
+      : '<p class="small muted" style="border-top:1px solid var(--ink);padding-top:1.2rem">' +
+        'まだやりとりはありません。下から送れます。</p>';
+
+    h += '<div style="margin-top:2rem">' +
+      (open
+        ? '<label class="field"><span class="lbl">事務局へ送る</span>' +
+          '<textarea id="m-body" placeholder="お困りごとや、講座の中で分からなかったところなど。"></textarea></label>' +
+          '<button class="btn btn-fill" id="m-send">送る</button>' +
+          '<p class="small muted" style="margin-top:.8rem">' +
+          '代表が直接読んでいます。返信までお時間をいただくことがあります。</p>'
+        : '<div class="card-flat"><p class="small muted">' +
+          'いまメッセージの受付を止めています。お急ぎのご用件は ' +
+          esc(db.settings.supportEmail) + ' までお願いします。</p></div>') +
+      '</div>';
+    return h;
+  }
+
+  function msgRow(m) {
+    var mine = m.from === 'member';
+    return '<div class="msg' + (mine ? ' msg--mine' : '') + '">' +
+      '<div class="msg-head">' +
+      '<span class="who">' + (mine ? esc(me.name) : esc(db.settings.representative) + '（事務局）') + '</span>' +
+      '<span class="dt">' + R.fmtDateTime(m.at) + '</span></div>' +
+      '<div class="msg-body">' + nl2br(m.body) + '</div></div>';
+  }
+
+  function bindMessages() {
+    var b = $('#m-send');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      var body = $('#m-body').value.trim();
+      if (body.length < 2) return U.toast('本文を入れてください');
+      try {
+        R.sendMessage(me.id, 'member', body);
+        U.toast('送りました');
+        rerender();
+      } catch (e) { U.toast(e.message, 'alert'); }
+    });
+  }
+
   /* ================= アカウント（A-4 / A-5） ================= */
   function viewAccount() {
     var now = S.clock.now();
@@ -608,7 +676,7 @@
   /* ================= 描画 ================= */
   var VIEWS = {
     home: viewHome, lessons: viewLessons, feed: viewFeed, materials: viewMaterials,
-    reports: viewReports, questions: viewQuestions, account: viewAccount
+    reports: viewReports, questions: viewQuestions, messages: viewMessages, account: viewAccount
   };
 
   function rerender() {
@@ -621,6 +689,7 @@
     if (page === 'lessons') bindLessons();
     if (page === 'reports') bindReports();
     if (page === 'questions') bindQuestions();
+    if (page === 'messages') bindMessages();
     if (page === 'account') bindAccount();
     bindCardFix();
     $$('[data-dl]').forEach(function (b) {

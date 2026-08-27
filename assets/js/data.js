@@ -29,7 +29,8 @@
         retryMaxCount: 3,
         lineUrl: 'https://line.me/R/ti/p/@example',
         supportEmail: 'info@example.co.jp',
-        mailFrom: 'エビデンスゼミ事務局 <info@example.co.jp>'
+        mailFrom: 'エビデンスゼミ事務局 <info@example.co.jp>',
+        messagesOpen: true        /* 会員からのメッセージを受け付けるか（管理画面から止められる） */
       },
 
       /* ---------- B. 動画講座 7回 ---------- */
@@ -131,6 +132,7 @@
       assignments: [],
       reports: [],
       questions: [],
+      messages: [],
       impressions: [],
       posts: [],
       payments: [],

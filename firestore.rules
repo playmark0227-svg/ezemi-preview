@@ -161,6 +161,24 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    /* ---------- メッセージ（会員 ⇄ 代表の1対1） ----------
+       本人と管理者だけが読める。書いたあとは誰も直せない（言った言わないを防ぐ）。
+       会員が名乗れるのは 'member' だけ。'admin' を騙って自分に返信できてしまうと、
+       事務局が言っていないことが履歴に残る。 */
+    match /messages/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.memberId == me());
+
+      allow create: if isAdmin() || (
+        entitled()
+        && request.resource.data.memberId == me()
+        && request.resource.data.from == 'member'
+        && (!exists(/databases/$(database)/documents/config/settings)
+            || get(/databases/$(database)/documents/config/settings).data.messagesOpen != false)
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
     /* ---------- 事務局側の記録 ----------
        会員は自分の行動を知らせる書き込みだけできる。読めるのは管理者。 */
     match /adminInbox/{id} {

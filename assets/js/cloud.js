@@ -22,6 +22,7 @@
     assignments: 'assignments',
     reports: 'reports',
     questions: 'questions',
+    messages: 'messages',
     impressions: 'impressions',
     posts: 'posts',
     payments: 'payments',
@@ -171,12 +172,12 @@
     }
 
     if (scope === 'admin') {
-      ['members', 'assignments', 'reports', 'questions', 'impressions', 'payments', 'notifications', 'adminInbox']
+      ['members', 'assignments', 'reports', 'questions', 'impressions', 'payments', 'notifications', 'adminInbox', 'messages']
         .forEach(function (c) { listen(c, fs.collection(fb.db, c), LISTS[c]); });
     } else if (scope === 'member') {
       /* 会員は自分の分だけ */
       listen('members', fs.query(fs.collection(fb.db, 'members'), fs.where('id', '==', uid)), 'members');
-      ['assignments', 'reports', 'questions', 'impressions', 'payments'].forEach(function (c) {
+      ['assignments', 'reports', 'questions', 'impressions', 'payments', 'messages'].forEach(function (c) {
         listen(c, fs.query(fs.collection(fb.db, c), fs.where('memberId', '==', uid)), LISTS[c]);
       });
       db.notifications = [];

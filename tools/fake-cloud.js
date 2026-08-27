@@ -82,11 +82,11 @@
           fillList('materials', true); fillList('coupons', true); fillList('posts', false);
         }
         if (scope === 'admin') {
-          ['members', 'assignments', 'reports', 'questions', 'impressions', 'payments', 'notifications', 'adminInbox']
+          ['members', 'assignments', 'reports', 'questions', 'impressions', 'payments', 'notifications', 'adminInbox', 'messages']
             .forEach(function (c) { db[c] = coll(c); });
         } else if (scope === 'member') {
           db.members = coll('members').filter(function (x) { return x.id === uid; });
-          ['assignments', 'reports', 'questions', 'impressions', 'payments'].forEach(function (c) {
+          ['assignments', 'reports', 'questions', 'impressions', 'payments', 'messages'].forEach(function (c) {
             db[c] = coll(c).filter(function (x) { return x.memberId === uid; });
           });
           db.notifications = []; db.adminInbox = [];
