@@ -211,8 +211,8 @@
         var mine = db.reports.filter(function (r) { return r.memberId === m.id; });
         var thisWk = mine.some(function (r) { return r.weekKey === wk; });
         return '<tr data-member="' + m.id + '" style="cursor:pointer">' +
-          '<td>' + esc(m.name) + (m.isDemo ? ' <span class="tag tag-dim">デモ</span>' : '') + '</td>' +
-          '<td class="small muted">' + esc(m.email) + '</td>' +
+          '<td class="nowrap">' + esc(m.name) + (m.isDemo ? ' <span class="tag tag-dim">デモ</span>' : '') + '</td>' +
+          '<td class="small muted ellip">' + esc(m.email) + '</td>' +
           '<td class="mono">' + R.fmtDate(m.joinedAt) + '</td>' +
           '<td><span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></td>' +
           '<td class="mono">' + pr.submitted + ' / ' + pr.total + '</td>' +
@@ -221,6 +221,7 @@
       }).join('') + '</tbody></table>'
       : '<p class="small muted">該当する会員はいません。</p>';
 
+    U.wrapWideTables($('#m-table'));
     $$('[data-member]').forEach(function (tr) {
       tr.addEventListener('click', function () { openMember(tr.dataset.member); });
     });
@@ -378,9 +379,9 @@
           '<td>' + esc(p.title) + '</td>' +
           '<td><span class="tag' + (vis.tone ? ' tag-' + vis.tone : '') + '">' + esc(vis.label) + '</span></td>' +
           '<td class="small muted">' + (p.notifiedAt ? '送信済み' : '未送信') + '</td>' +
-          '<td class="row" style="gap:6px"><button class="btn btn-ghost btn-xs" data-perm="' + p.id + '">' +
+          '<td><div class="cell-actions"><button class="btn btn-ghost btn-xs" data-perm="' + p.id + '">' +
           (p.permanent ? '殿堂入りを外す' : '殿堂入りにする') + '</button>' +
-          '<button class="btn btn-ghost btn-xs" data-delpost="' + p.id + '">削除</button></td></tr>';
+          '<button class="btn btn-ghost btn-xs" data-delpost="' + p.id + '">削除</button></div></td></tr>';
       }).join('') + '</tbody></table>';
     return h;
   }
@@ -640,9 +641,9 @@
     var h = pagehead('動画・教材・公開ページ', '動画URLと教材PDFの差し替え、公開側の文言はここで直します。');
 
     h += '<h2 class="ttl-s">動画講座（7回）</h2>' +
-      '<table class="tbl" style="margin-bottom:36px"><thead><tr><th style="width:5em">回</th><th>題名</th><th>動画URL（限定公開）</th><th></th></tr></thead><tbody>' +
+      '<table class="tbl" style="margin-bottom:36px"><thead><tr><th style="width:4.5em">回</th><th>題名</th><th>動画URL（限定公開）</th><th></th></tr></thead><tbody>' +
       db.lessons.map(function (l) {
-        return '<tr><td class="mono">第' + l.no + '回</td>' +
+        return '<tr><td class="mono nowrap">第' + l.no + '回</td>' +
           '<td><input type="text" data-ltitle="' + l.no + '" value="' + esc(l.title) + '"></td>' +
           '<td><input type="text" data-lurl="' + l.no + '" value="' + esc(l.videoUrl) + '" placeholder="YouTube限定公開URLなど"></td>' +
           '<td><button class="btn btn-ghost btn-xs" data-lsave="' + l.no + '">保存</button></td></tr>';
@@ -654,9 +655,9 @@
         return '<tr><td><input type="text" data-mtitle="' + m.id + '" value="' + esc(m.title) + '"></td>' +
           '<td class="small muted mono">' + esc(m.file) + '</td>' +
           '<td><input type="text" data-mnote="' + m.id + '" value="' + esc(m.note) + '"></td>' +
-          '<td class="row" style="gap:6px"><label class="btn btn-ghost btn-xs" style="cursor:pointer">差し替え' +
+          '<td><div class="cell-actions"><label class="btn btn-ghost btn-xs" style="cursor:pointer">差し替え' +
           '<input type="file" data-mfile="' + m.id + '" accept="application/pdf" style="display:none"></label>' +
-          '<button class="btn btn-ghost btn-xs" data-msave="' + m.id + '">保存</button></td></tr>';
+          '<button class="btn btn-ghost btn-xs" data-msave="' + m.id + '">保存</button></div></td></tr>';
       }).join('') + '</tbody></table>';
 
     h += '<h2 class="ttl-s">公開レポート（公開側）</h2>' +
@@ -998,6 +999,7 @@
     load();
     $('#root').innerHTML = shell(VIEWS[page]());
     window.scrollTo(0, 0);
+    U.wrapWideTables($('.main'));
     bindCommon();
     if (page === 'home') bindHome();
     if (page === 'members') bindMembers();

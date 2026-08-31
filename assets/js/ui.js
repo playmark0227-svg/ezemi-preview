@@ -30,6 +30,7 @@
     bg.className = 'modal-bg';
     bg.innerHTML = '<div class="modal' + (opts.wide ? ' modal-wide' : '') + '">' + html + '</div>';
     document.body.appendChild(bg);
+    wrapWideTables(bg);
     document.body.style.overflow = 'hidden';
     function close() { bg.remove(); document.body.style.overflow = ''; if (opts.onClose) opts.onClose(); }
     bg.addEventListener('click', function (e) { if (e.target === bg && !opts.sticky) close(); });
@@ -125,5 +126,18 @@
     return bar;
   }
 
-  EZ.ui = { esc: esc, nl2br: nl2br, $: $, $$: $$, toast: toast, modal: modal, confirmBox: confirmBox, download: download, devbar: devbar, guide: guide };
+  /** 列の多い表は、狭い画面で潰れるより横に送れたほうが読める。
+      見出し行が4列以上ある表だけを対象にする（項目名だけの2列の表は対象外）。 */
+  function wrapWideTables(root) {
+    $$('table.tbl', root || document).forEach(function (t) {
+      if (t.parentElement && t.parentElement.classList.contains('tbl-scroll')) return;
+      if (t.querySelectorAll('thead th').length < 4) return;
+      var box = document.createElement('div');
+      box.className = 'tbl-scroll';
+      t.parentNode.insertBefore(box, t);
+      box.appendChild(t);
+    });
+  }
+
+  EZ.ui = { esc: esc, nl2br: nl2br, $: $, $$: $$, wrapWideTables: wrapWideTables, toast: toast, modal: modal, confirmBox: confirmBox, download: download, devbar: devbar, guide: guide };
 })(window);

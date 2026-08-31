@@ -92,7 +92,9 @@ table { border-collapse: collapse; width: 100%; }
   --shadow-lift: 0 2px 6px rgba(10,28,46,.06), 0 20px 40px -18px rgba(10,28,46,.24);
   --ring: 0 0 0 3px rgba(27, 79, 107, .22);
 
-  --maxw: 1180px;
+  /* 本文の横幅。ヘッダーもセクションも全部これに揃える。
+     ここが揃っていないと、段ごとに右端がずれて落ち着かない紙面になる。 */
+  --maxw: 980px;
   --ease: cubic-bezier(.22, .61, .36, 1);
 
   --font: "Hiragino Sans", "ヒラギノ角ゴシック", "Noto Sans JP",
@@ -115,7 +117,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 .wrap { width: min(100% - 2.4rem, var(--maxw)); margin-inline: auto; }
-.wrap-narrow { width: min(100% - 2.4rem, 820px); margin-inline: auto; }
+/* 読み物のページも器の幅は同じにする。ここだけ狭くして中央に置くと、
+   ヘッダーやフッターに対して本文だけが内側にずれて落ち着かない。
+   1行の長さは中の要素（.prose p など）で決める。 */
+.wrap-narrow { width: min(100% - 2.4rem, var(--maxw)); margin-inline: auto; }
 
 /* ---------- 04. Typography ---------- */
 h1, h2 {
@@ -147,7 +152,12 @@ p, li, dd { text-wrap: pretty; }
    （罫を全部の見出しに引いていたのをやめた。装飾が繰り返されると様式に見える） */
 .bar-ttl { margin-bottom: 1.5rem; }
 
-.lead { font-size: 1rem; line-height: 2.05; color: var(--ink-2); max-width: var(--measure-lead); }
+/* 日本語は語の切れ目で折り返す。これが無いと「〜公開し／ています。」のように
+   最終行に2文字だけ残る行が出て、読みにくくなる。 */
+.lead {
+  font-size: 1rem; line-height: 2.05; color: var(--ink-2); max-width: var(--measure-lead);
+  word-break: auto-phrase; text-wrap: pretty;
+}
 .small { font-size: .84rem; line-height: 1.9; }
 .muted { color: var(--muted); }
 .mono, .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
@@ -238,20 +248,46 @@ input[type=date], input[type=datetime-local], select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--ocean); box-shadow: var(--ring); }
 textarea { line-height: 1.95; resize: vertical; min-height: 7.5rem; }
 .check { display: flex; gap: .65rem; align-items: flex-start; cursor: pointer; font-size: .88rem; line-height: 1.85; }
+.check span { word-break: auto-phrase; }
 .check input { margin-top: .42rem; flex: 0 0 auto; accent-color: var(--ocean); }
 
 /* ---------- 09. Tables ---------- */
 .tbl { font-size: .86rem; background: var(--white); }
-  .tbl th {
+.tbl th {
   text-align: left; font-weight: 600; font-size: .74rem; letter-spacing: .06em;
-  color: var(--muted); padding: .7rem .9rem .5rem; white-space: nowrap;
-  border-bottom: 1px solid var(--ink); background: transparent;
+  color: var(--muted); padding: .7rem .9rem .5rem; background: transparent;
+}
+/* 列見出しの行だけ濃い罫を引く */
+.tbl thead th { white-space: nowrap; border-bottom: 1px solid var(--ink); }
+/* 行の項目名（お名前・入会日など）は見出しではなくラベル扱い */
+.tbl tbody th {
+  border-bottom: 1px solid var(--line); vertical-align: top;
+  padding: .82rem .9rem; font-size: .8rem; font-weight: 500;
 }
 .tbl td { padding: .82rem .9rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:last-child td, .tbl tbody tr:last-child th { border-bottom: 0; }
 .tbl tbody tr { transition: background .2s; }
 .tbl tbody tr:hover { background: rgba(27,79,107,.03); }
 .tbl .num { text-align: right; font-family: var(--font-en); }
+.tbl .nowrap, .tbl td.mono { white-space: nowrap; }
+/* メールなどは折り返さない。どこでも折り返せるようにすると、狭い画面で
+   1行に数文字ずつ積まれて読めなくなる。収まらないときは表ごと横に送る。 */
+.tbl .ellip { white-space: nowrap; }
+.tbl input[type=text], .tbl input[type=number], .tbl select {
+  padding: .45em .6em; font-size: .84rem; min-width: 0;
+}
+/* 表のセルに並べるボタン。td を直接 flex にすると、そのセルが
+   表の枠組みから外れて罫線が途切れるので、中に入れ物をひとつ挟む。 */
+.cell-actions { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+
+/* ファイル選択。既定の見た目のままだと浮くので、他のボタンに寄せる */
+input[type=file] { font-size: .82rem; color: var(--muted); }
+input[type=file]::file-selector-button {
+  font: inherit; margin-right: .7rem; padding: .5em 1em; cursor: pointer;
+  background: transparent; color: var(--deep); border: 0;
+  border-radius: var(--r-xs); box-shadow: inset 0 0 0 1px rgba(26,43,56,.28);
+}
+input[type=file]::file-selector-button:hover { background: rgba(26,43,56,.05); }
 
 /* ---------- 10. Utilities ---------- */
 .row { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; }
@@ -311,10 +347,15 @@ textarea { line-height: 1.95; resize: vertical; min-height: 7.5rem; }
 #devbar, #devbar button, #devbar span { white-space: nowrap; }
 
 @media (max-width: 640px) {
-  /* 狭い画面では折り返して縦に伸びていたので、日付だけ残して詰める */
-  #devbar { left: 0; right: 0; border-radius: 0; gap: .4rem; padding: .45rem .6rem; font-size: .68rem; justify-content: center; }
+  /* 狭い画面では中身が横にはみ出していたので、必要なら横スクロールさせる */
+  #devbar {
+    left: 0; right: 0; border-radius: 0; gap: .4rem; padding: .45rem .6rem;
+    font-size: .68rem; justify-content: flex-start; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #devbar::-webkit-scrollbar { display: none; }
   #devbar .dev-lbl { display: none; }
-  #devbar button { padding: .3em .6em; font-size: .68rem; }
+  #devbar button { padding: .3em .6em; font-size: .68rem; flex: 0 0 auto; }
 }
 
 /* ---------- 14. Focus / Selection ---------- */
@@ -325,3 +366,8 @@ textarea { line-height: 1.95; resize: vertical; min-height: 7.5rem; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 @media print { #devbar, .no-print { display: none !important; } }
+
+/* 列の多い表。狭い画面では潰さずに横へ送る。
+   1文字ずつ改行された列が並ぶより、スクロールできたほうが読める。 */
+.tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tbl-scroll > .tbl { min-width: 50rem; }

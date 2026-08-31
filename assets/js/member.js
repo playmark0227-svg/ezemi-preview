@@ -226,9 +226,9 @@
     h += '</div>';
 
     if (unreadMsg) {
-      h += '<div class="card" style="margin-bottom:1.6rem;border-color:var(--gold)">' +
+      h += '<div class="notice-inline">' +
         '<div class="row-between"><div>' +
-        '<h3 class="ttl-s" style="margin-bottom:.3rem">事務局からメッセージが' + unreadMsg + '件届いています</h3>' +
+        '<h3 class="ttl-s" style="margin-bottom:.2rem">事務局からメッセージが' + unreadMsg + '件届いています</h3>' +
         '<p class="small muted">まだ読んでいないものがあります。</p></div>' +
         '<a class="btn btn-ghost btn-s" href="#messages">読む</a></div></div>';
     }
@@ -577,9 +577,9 @@
     var h = pagehead('アカウント', 'お支払いと会員資格の状態です。解約はこのページから完結し、連絡は不要です。');
 
     h += '<div class="card" style="margin-bottom:24px">' +
-      '<div class="row-between" style="margin-bottom:20px">' +
-      '<div><span class="eyebrow">会員資格</span><h3 class="ttl-s">' + esc(st.label) + '</h3></div>' +
-      '<span class="tag tag-' + (st.tone || 'dim') + '">' + esc(st.label) + '</span></div>' +
+      '<div style="margin-bottom:1.3rem">' +
+      '<span class="eyebrow">会員資格</span>' +
+      '<h3 class="ttl-s" style="margin-top:.25rem">' + esc(st.label) + '</h3></div>' +
       '<table class="tbl"><tbody>' +
       row('お名前', esc(me.name)) +
       row('メールアドレス', esc(me.email)) +
@@ -685,6 +685,7 @@
     if (!me) return renderLogin();
     $('#root').innerHTML = shell(VIEWS[page]());
     window.scrollTo(0, 0);
+    U.wrapWideTables($('.main'));
     bindCommon();
     if (page === 'lessons') bindLessons();
     if (page === 'reports') bindReports();

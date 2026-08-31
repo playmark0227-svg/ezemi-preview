@@ -42,11 +42,15 @@
 .side-foot a:hover { color: #fff; text-decoration: underline; }
 
 /* ---------- 本文 ---------- */
-.main { padding: 2.2rem clamp(1.4rem, 3vw, 2.6rem) 7rem; max-width: 1100px; }
+.main { --main-pad: clamp(1.4rem, 3vw, 2.6rem); padding: 2.2rem var(--main-pad) 7rem; max-width: 1100px; }
 .pagehead { margin-bottom: 2rem; }
 .pagehead h1 { font-size: clamp(1.35rem, 2.6vw, 1.75rem); font-weight: 500; color: var(--deep); }
 .pagehead p { font-size: .87rem; color: var(--ink-2); margin-top: .6rem; max-width: var(--measure-body); line-height: 2; }
 .mobile-head { display: none; }
+
+/* 枠のある面（.card）の中身が、罫線だけの一覧より内側にずれて見えるのを防ぐ。
+   枠の左右の余白ぶんだけ外へ出して、文字の左端を他の段と揃える。 */
+.main > .card { margin-inline: calc(var(--cell-pad-x) * -1); }
 
 /* 見出しの下の罫をやめたぶん、余白で段差をつける */
 .main h2.ttl-s, .main h4.ttl-s { margin: 2.4rem 0 1rem; }
@@ -122,8 +126,10 @@
 .post .bd { font-size: .88rem; color: var(--ink-2); line-height: 2.05; }
 .post .media {
   margin-top: 1rem; border-left: 2px solid var(--line);
-  padding: .2rem 0 .2rem .8rem; font-size: .78rem; color: var(--muted); display: flex; gap: .65rem; align-items: center;
+  padding: .2rem 0 .2rem .8rem; font-size: .78rem; color: var(--muted);
+  display: flex; gap: .65rem; align-items: baseline; flex-wrap: wrap;
 }
+.post .media span:last-child { word-break: auto-phrase; }
 .post .media .mono { color: var(--ocean); font-weight: 600; }
 .expired-note {
   border: 1px dashed var(--line); border-radius: var(--r-m); padding: 1.2rem 1.3rem;
@@ -202,7 +208,11 @@
   }
   .mobile-head button { background: rgba(27,79,107,.10); border-radius: var(--r-s); padding: .45em .9em; font-size: .78rem; color: var(--deep); font-weight: 700; }
   .mobile-head .brand__logo { height: 22px; width: auto; }
-  .main { padding: 1.4rem 1.2rem 7rem; }
+  .main { --main-pad: 1.2rem; padding: 1.4rem var(--main-pad) 7rem; }
+  /* 画面が狭いときは、todo の操作ボタンを下に落として本文の幅を確保する */
+  .todo-item { flex-wrap: wrap; }
+  .todo-item .tx { min-width: 60%; }
+  .todo-item > .btn { margin-left: 2.6rem; }
 }
 
 /* ---------- メッセージ ----------
@@ -234,3 +244,11 @@
 .thread-row .h strong { font-size: .92rem; color: var(--deep); }
 .thread-row p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .thread-row .dt { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+
+/* 罫線だけで組んだ画面の中に置く「お知らせ」。
+   枠で囲むと他の段と左端がずれるので、上下の罫と地色だけで示す。 */
+.notice-inline {
+  background: var(--foam); border-top: 1px solid var(--gold);
+  padding: 1.05rem var(--main-pad); margin: 0 calc(var(--main-pad) * -1) 1.6rem;
+}
+.notice-inline h3 { font-family: var(--font); font-size: .95rem; font-weight: 600; }
