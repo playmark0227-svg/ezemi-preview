@@ -4,7 +4,7 @@
 # 実行するだけでよい（引数なし）。
 set -e
 cd "$(dirname "$0")"
-NEW=$(date +%Y%m%d%H%M)
+NEW=$(date +%Y%m%d%H%M%S)   # 秒まで入れる。分だけだと同じ分の2回目が反映されない
 for f in index.html member.html admin.html; do
   perl -pi -e "s/(assets\/(?:css|js)\/[a-z]+\.(?:css|js))\?v=[0-9]+/\$1?v=$NEW/g" "$f"
 done

@@ -77,15 +77,15 @@
 
   /* ================= 枠 ================= */
   var NAV = [
-    { id: 'home', label: 'ホーム', grp: '毎日' },
-    { id: 'members', label: '会員一覧', grp: '毎日' },
-    { id: 'posts', label: '配信の投稿・予約', grp: '毎日' },
-    { id: 'messages', label: 'メッセージ', grp: '毎日' },
-    { id: 'submissions', label: '課題・レポート・質問', grp: '毎日' },
-    { id: 'content', label: '動画・教材・公開ページ', grp: 'ときどき' },
-    { id: 'pricing', label: '料金・クーポン', grp: 'ときどき' },
-    { id: 'notifications', label: '通知の送信ログ', grp: 'ときどき' },
-    { id: 'data', label: 'データ', grp: 'ときどき' }
+    { id: 'home', label: 'ホーム', grp: '毎日', icon: 'home' },
+    { id: 'members', label: '会員一覧', grp: '毎日', icon: 'members' },
+    { id: 'posts', label: '配信の投稿・予約', grp: '毎日', icon: 'posts' },
+    { id: 'messages', label: 'メッセージ', grp: '毎日', icon: 'messages' },
+    { id: 'submissions', label: '課題・レポート', grp: '毎日', icon: 'inbox' },
+    { id: 'content', label: '動画・教材・文言', grp: 'ときどき', icon: 'content' },
+    { id: 'pricing', label: '料金・クーポン', grp: 'ときどき', icon: 'pricing' },
+    { id: 'notifications', label: '通知の送信ログ', grp: 'ときどき', icon: 'bell' },
+    { id: 'data', label: 'データ', grp: 'ときどき', icon: 'data' }
   ];
 
   function shell(inner) {
@@ -100,12 +100,13 @@
       var badge = n.id === 'home' ? unread
         : n.id === 'messages' ? msgUnread
         : n.id === 'submissions' ? pending : 0;
-      out += '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '"><span>' + esc(n.label) + '</span>' +
+      out += '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '">' +
+        U.icon(n.icon) + '<span>' + esc(n.label) + '</span>' +
         (badge ? '<span class="n">' + badge + '</span>' : '') + '</a>';
       return out;
     }).join('');
 
-    return '<div class="app">' +
+    return '<div class="app app--admin">' +
       '<aside class="side" id="side">' +
       brandBlock() +
       nav +
@@ -114,6 +115,7 @@
       '<a href="index.html" style="margin-top:6px;display:inline-block">公開サイトを見る</a>' +
       (S.mode() === 'cloud' ? '　<a href="#" id="adminLogout">ログアウト</a>' : '') + '</div>' +
       '</aside><div>' +
+      '<div class="scrim" id="scrim"></div>' +
       '<div class="mobile-head"><button id="menuBtn">メニュー</button>' +
       '<picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
       '<span class="ttl-s">管理画面</span></div>' +
@@ -148,23 +150,24 @@
     h += '<div class="row-between" style="margin-bottom:14px"><h2 class="ttl-s">届いていること</h2>' +
       (db.adminInbox.length ? '<button class="btn btn-ghost btn-xs" id="mark-all">すべて読んだことにする</button>' : '') + '</div>';
     h += db.adminInbox.length
-      ? db.adminInbox.slice(0, 25).map(function (i) {
+      ? '<div class="inbox-list">' + db.adminInbox.slice(0, 25).map(function (i) {
         return '<div class="inbox-item' + (i.read ? '' : ' unread') + '" data-inbox="' + i.id + '">' +
+          '<span class="dot"></span>' +
           '<div class="tx"><h4>' + esc(i.title) + '</h4><p>' + esc(i.body) + '</p></div>' +
           '<span class="dt">' + R.ago(i.at, now) + '</span></div>';
-      }).join('')
-      : '<p class="small muted">いまは何もありません。</p>';
+      }).join('') + '</div>'
+      : '<div class="card"><p class="small muted">いまは何もありません。</p></div>';
 
     if (pastDue.length) {
       h += '<h2 class="ttl-s" style="margin-top:36px">支払いに問題がある会員</h2>' +
-        '<table class="tbl"><thead><tr><th>氏名</th><th>状態</th><th>最初の失敗</th><th>次の自動リトライ</th><th></th></tr></thead><tbody>' +
+        '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>氏名</th><th>状態</th><th>最初の失敗</th><th>次の自動リトライ</th><th></th></tr></thead><tbody>' +
         pastDue.map(function (m) {
           var st = R.statusOf(m, now);
           return '<tr><td>' + esc(m.name) + '</td><td><span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></td>' +
             '<td class="mono">' + R.fmtDate(m.billing.firstFailAt) + '</td>' +
             '<td class="mono">' + (m.billing.state === 'past_due' ? R.fmtDate(m.billing.nextRetryAt) : '—') + '</td>' +
             '<td><button class="btn btn-ghost btn-xs" data-member="' + m.id + '">開く</button></td></tr>';
-        }).join('') + '</tbody></table>';
+        }).join('') + '</tbody></table></div>';
     }
     return h;
   }
@@ -202,8 +205,8 @@
     var wk = R.weekKey(now);
     $('#m-count').textContent = rows.length + ' / ' + db.members.length + ' 名';
     $('#m-table').innerHTML = rows.length ?
-      '<table class="tbl"><thead><tr>' +
-      '<th>氏名</th><th>メール</th><th>入会日</th><th>決済状態</th><th>講座進捗</th><th>今週のレポート</th><th>累計</th>' +
+      '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+      '<th>氏名</th><th>メール</th><th>入会日</th><th>決済状態</th><th>講座進捗</th><th>今週のレポート</th><th>累計</th><th></th>' +
       '</tr></thead><tbody>' +
       rows.map(function (m) {
         var st = R.statusOf(m, now);
@@ -217,8 +220,9 @@
           '<td><span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></td>' +
           '<td class="mono">' + pr.submitted + ' / ' + pr.total + '</td>' +
           '<td>' + (thisWk ? '<span class="cellmark yes">✓</span>' : '<span class="cellmark no">—</span>') + '</td>' +
-          '<td class="mono">' + mine.length + '本</td></tr>';
-      }).join('') + '</tbody></table>'
+          '<td class="mono">' + mine.length + '本</td>' +
+          '<td style="width:1.6rem;text-align:right">' + U.chevron() + '</td></tr>';
+      }).join('') + '</tbody></table></div>'
       : '<p class="small muted">該当する会員はいません。</p>';
 
     U.wrapWideTables($('#m-table'));
@@ -243,13 +247,13 @@
       '<p class="small muted">' + esc(m.email) + '</p></div>' +
       '<span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></div>';
 
-    h += '<table class="tbl" style="margin-bottom:26px"><tbody>' +
+    h += '<div class="tbl-wrap"><table class="tbl" style="margin-bottom:26px"><tbody>' +
       '<tr><th style="width:11em">入会日</th><td>' + R.fmtDate(m.joinedAt) + '</td></tr>' +
       '<tr><th>いまの請求期間</th><td>' + R.fmtDate(m.billing.periodStart) + ' 〜 ' + R.fmtDate(m.billing.periodEnd) + '</td></tr>' +
       '<tr><th>クーポン</th><td>' + (m.coupon ? esc(m.coupon) : '—') + '</td></tr>' +
       '<tr><th>無料期間の残り</th><td>' + m.billing.freeMonths + ' ヶ月</td></tr>' +
       '<tr><th>LINE通知</th><td>' + (m.lineLinked ? '受け取る' : '受け取らない') + '</td></tr>' +
-      '</tbody></table>';
+      '</tbody></table></div>';
 
     h += '<h4 class="ttl-s">講座の提出内容</h4>';
     h += states.map(function (s) {
@@ -276,12 +280,12 @@
     }).join('') : '<p class="small muted">まだありません。</p>';
 
     h += '<h4 class="ttl-s" style="margin-top:26px">お支払い</h4>' +
-      '<table class="tbl"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th><th></th></tr></thead><tbody>' +
+      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th><th></th></tr></thead><tbody>' +
       pays.map(function (p) {
         return '<tr><td class="mono">' + R.fmtDate(p.at) + '</td><td>' + (p.kind === 'initial' ? '入会金' : '月額') + '</td>' +
           '<td class="num">' + R.fmtYen(p.amount) + '</td><td>' + payTag(p.status) + '</td>' +
           '<td>' + (p.status === 'paid' && p.amount > 0 ? '<button class="btn btn-ghost btn-xs" data-refund="' + p.id + '">返金</button>' : '') + '</td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
 
     h += '<h4 class="ttl-s" style="margin-top:26px">操作</h4>' +
       '<div class="row">' +
@@ -371,18 +375,18 @@
 
     var sorted = db.posts.slice().sort(function (a, b) { return b.publishAt - a.publishAt; });
     h += '<h2 class="ttl-s">投稿した配信（' + sorted.length + '本）</h2>';
-    h += '<table class="tbl"><thead><tr><th>公開日時</th><th>種別</th><th>題名</th><th>状態</th><th>通知</th><th></th></tr></thead><tbody>' +
+    h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>公開日時</th><th>種別</th><th>題名</th><th>状態</th><th>通知</th><th></th></tr></thead><tbody>' +
       sorted.map(function (p) {
         var vis = R.postVisibility(db, p, now);
         return '<tr><td class="mono">' + R.fmtDateTime(p.publishAt) + '</td>' +
           '<td><span class="tag">' + esc(p.kind) + '</span></td>' +
           '<td>' + esc(p.title) + '</td>' +
           '<td><span class="tag' + (vis.tone ? ' tag-' + vis.tone : '') + '">' + esc(vis.label) + '</span></td>' +
-          '<td class="small muted">' + (p.notifiedAt ? '送信済み' : '未送信') + '</td>' +
+          '<td class="small muted nowrap">' + (p.notifiedAt ? '送信済み' : '未送信') + '</td>' +
           '<td><div class="cell-actions"><button class="btn btn-ghost btn-xs" data-perm="' + p.id + '">' +
           (p.permanent ? '殿堂入りを外す' : '殿堂入りにする') + '</button>' +
           '<button class="btn btn-ghost btn-xs" data-delpost="' + p.id + '">削除</button></div></td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
     return h;
   }
 
@@ -437,7 +441,7 @@
     var actives = db.members.filter(function (m) { return R.canView(m, now); });
     h += '<div class="row-between" style="margin-bottom:12px"><h2 class="ttl-s">週1レポートの提出状況（会員×週）</h2>' +
       '<button class="btn btn-ghost btn-xs" id="r-csv">CSVで書き出す</button></div>';
-    h += '<div style="overflow-x:auto;margin-bottom:36px"><table class="tbl matrix"><thead><tr><th>氏名</th>' +
+    h += '<div class="tbl-wrap" style="margin-bottom:1.6rem"><table class="tbl matrix"><thead><tr><th>氏名</th>' +
       mtx.weeks.map(function (w) { return '<th>' + w.key.slice(5) + '<br><span class="muted mono" style="font-size:10px">' + R.fmtDateShort(w.start) + '〜</span></th>'; }).join('') +
       '<th>提出率</th></tr></thead><tbody>' +
       (actives.length ? actives.map(function (m) {
@@ -538,8 +542,8 @@
     h += '<div class="row-between" style="margin-bottom:1.4rem">' +
       '<span class="small muted">' +
       (R.totalUnreadForAdmin(db) ? '未読 ' + R.totalUnreadForAdmin(db) + '件' : '未読はありません') + '</span>' +
-      '<label class="check"><input type="checkbox" id="m-open"' + (open ? ' checked' : '') + '>' +
-      '<span>会員からの受付をひらく</span></label></div>';
+      '<label class="switch"><input type="checkbox" id="m-open"' + (open ? ' checked' : '') + '>' +
+      '<span class="track"></span><span>会員からの受付をひらく</span></label></div>';
     if (!open) {
       h += '<div class="card-flat" style="margin-bottom:1.4rem"><p class="small muted">' +
         'いま受付を止めています。会員の画面には「受付を止めています」と出て、送信できません。' +
@@ -569,7 +573,7 @@
         (last.body.length > 46 ? '…' : '') : 'まだやりとりがありません') +
       '</p></div>' +
       '<span class="dt">' + (last ? R.ago(last.at, S.clock.now()) : '—') + '</span>' +
-      '</div>';
+      U.chevron() + '</div>';
   }
 
   function viewThread(memberId) {
@@ -580,7 +584,7 @@
     var thread = R.threadOf(db, memberId);
 
     var h = '<div class="pagehead">' +
-      '<a href="#messages" id="m-back" class="small muted" style="display:inline-block;margin-bottom:.8rem">← メッセージ一覧へ</a>' +
+      '<a href="#messages" id="m-back" class="backlink">' + U.chevron() + 'メッセージ一覧へ</a>' +
       '<div class="row-between"><h1 class="ttl-m">' + esc(m.name) + '</h1>' +
       '<span class="tag tag-' + st.tone + '">' + esc(st.label) + '</span></div>' +
       '<p>' + esc(m.email) + '　／　入会 ' + R.fmtDate(m.joinedAt) +
@@ -590,10 +594,10 @@
       ? '<div class="thread">' + thread.map(function (x) { return adminMsgRow(x, m); }).join('') + '</div>'
       : '<p class="small muted" style="border-top:1px solid var(--ink);padding-top:1.2rem">まだやりとりはありません。</p>';
 
-    h += '<div style="margin-top:2rem">' +
-      '<label class="field"><span class="lbl">' + esc(m.name) + ' さんへ返信</span>' +
-      '<textarea id="t-body" placeholder="ここに書いて送ります。"></textarea></label>' +
-      '<div class="row"><button class="btn btn-fill" id="t-send">送る</button>' +
+    h += '<h2 class="ttl-s">' + esc(m.name) + ' さんへ返信</h2>' +
+      '<div class="card">' +
+      '<textarea id="t-body" placeholder="ここに書いて送ります。"></textarea>' +
+      '<div class="row" style="margin-top:.9rem"><button class="btn btn-fill" id="t-send">送る</button>' +
       '<span class="small muted">送ると本人にメール（とLINE）でお知らせが飛びます。</span></div></div>';
     return h;
   }
@@ -641,16 +645,16 @@
     var h = pagehead('動画・教材・公開ページ', '動画URLと教材PDFの差し替え、公開側の文言はここで直します。');
 
     h += '<h2 class="ttl-s">動画講座（7回）</h2>' +
-      '<table class="tbl" style="margin-bottom:36px"><thead><tr><th style="width:4.5em">回</th><th>題名</th><th>動画URL（限定公開）</th><th></th></tr></thead><tbody>' +
+      '<div class="tbl-wrap"><table class="tbl" style="margin-bottom:36px"><thead><tr><th style="width:4.5em">回</th><th>題名</th><th>動画URL（限定公開）</th><th></th></tr></thead><tbody>' +
       db.lessons.map(function (l) {
         return '<tr><td class="mono nowrap">第' + l.no + '回</td>' +
           '<td><input type="text" data-ltitle="' + l.no + '" value="' + esc(l.title) + '"></td>' +
           '<td><input type="text" data-lurl="' + l.no + '" value="' + esc(l.videoUrl) + '" placeholder="YouTube限定公開URLなど"></td>' +
           '<td><button class="btn btn-ghost btn-xs" data-lsave="' + l.no + '">保存</button></td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
 
     h += '<h2 class="ttl-s">教材PDF</h2>' +
-      '<table class="tbl" style="margin-bottom:36px"><thead><tr><th>題名</th><th>ファイル</th><th>説明</th><th></th></tr></thead><tbody>' +
+      '<div class="tbl-wrap"><table class="tbl" style="margin-bottom:36px"><thead><tr><th>題名</th><th>ファイル</th><th>説明</th><th></th></tr></thead><tbody>' +
       db.materials.map(function (m) {
         return '<tr><td><input type="text" data-mtitle="' + m.id + '" value="' + esc(m.title) + '"></td>' +
           '<td class="small muted mono">' + esc(m.file) + '</td>' +
@@ -658,14 +662,14 @@
           '<td><div class="cell-actions"><label class="btn btn-ghost btn-xs" style="cursor:pointer">差し替え' +
           '<input type="file" data-mfile="' + m.id + '" accept="application/pdf" style="display:none"></label>' +
           '<button class="btn btn-ghost btn-xs" data-msave="' + m.id + '">保存</button></div></td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
 
     h += '<h2 class="ttl-s">公開レポート（公開側）</h2>' +
-      '<table class="tbl" style="margin-bottom:36px"><thead><tr><th>分類</th><th>題名</th><th>公開日</th></tr></thead><tbody>' +
+      '<div class="tbl-wrap"><table class="tbl" style="margin-bottom:36px"><thead><tr><th>分類</th><th>題名</th><th>公開日</th></tr></thead><tbody>' +
       db.publicReports.map(function (r) {
         return '<tr><td><span class="tag">' + esc(r.category) + '</span></td><td>' + esc(r.title) + '</td>' +
           '<td class="mono">' + R.fmtDate(new Date(r.date).getTime()) + '</td></tr>';
-      }).join('') + '</tbody></table>' +
+      }).join('') + '</tbody></table></div>' +
       '<p class="small muted" style="margin-top:-24px;margin-bottom:36px">※ 公開レポートの本文は当方支給の原稿を流し込みます。追加できる形にしてあります。</p>';
 
     h += '<h2 class="ttl-s">サイトの文言</h2>' +
@@ -748,7 +752,7 @@
 
     h += '<div class="row-between" style="margin-bottom:12px"><h2 class="ttl-s">クーポン</h2>' +
       '<button class="btn btn-ghost btn-xs" id="c-new">新しく作る</button></div>';
-    h += '<table class="tbl"><thead><tr><th>コード</th><th>内容</th><th>入会金</th><th>無料月数</th><th>上限</th><th>使用済み</th><th></th></tr></thead><tbody>' +
+    h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>コード</th><th>内容</th><th>入会金</th><th>無料月数</th><th>上限</th><th>使用済み</th><th></th></tr></thead><tbody>' +
       db.coupons.map(function (c) {
         return '<tr><td class="mono">' + esc(c.code) + '</td><td>' + esc(c.label) + '</td>' +
           '<td>' + (c.waiveInitial ? '<span class="tag tag-gold">免除</span>' : '通常') + '</td>' +
@@ -756,7 +760,7 @@
           '<td class="mono">' + (c.limit || '無制限') + '</td>' +
           '<td class="mono">' + c.used + '</td>' +
           '<td><button class="btn btn-ghost btn-xs" data-ctoggle="' + esc(c.code) + '">' + (c.active ? '止める' : '再開') + '</button></td></tr>';
-      }).join('') + '</tbody></table>' +
+      }).join('') + '</tbody></table></div>' +
       '<p class="small muted" style="margin-top:14px">モニター用は「入会金免除＋初月無料」。' +
       '2ヶ月目から通常の月額が始まります。</p>';
     return h;
@@ -815,7 +819,7 @@
     var h = pagehead('通知の送信ログ',
       '配信の投稿、決済の失敗、解約などで自動的に送られたお知らせです。' +
       'メールは会社ドメインから（SPF/DKIM設定込み）、LINEは友だち追加済みの会員だけに送ります。');
-    h += '<table class="tbl"><thead><tr><th style="width:6em">経路</th><th>宛先</th><th>件名</th><th>本文</th><th style="width:9em">日時</th></tr></thead><tbody>' +
+    h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th style="width:6em">経路</th><th>宛先</th><th>件名</th><th>本文</th><th style="width:9em">日時</th></tr></thead><tbody>' +
       (db.notifications.length ? db.notifications.slice(0, 120).map(function (n) {
         return '<tr><td><span class="tag ' + (n.channel === 'line' ? 'tag-ok' : 'tag-sea') + '">' +
           (n.channel === 'line' ? 'LINE' : 'メール') + '</span></td>' +
@@ -823,7 +827,7 @@
           '<td class="small">' + esc(n.subject) + '</td>' +
           '<td class="small muted">' + esc((n.body || '').slice(0, 60)) + '</td>' +
           '<td class="mono small">' + R.fmtDateTime(n.at) + '</td></tr>';
-      }).join('') : '<tr><td colspan="5" class="muted">まだありません</td></tr>') + '</tbody></table>';
+      }).join('') : '<tr><td colspan="5" class="muted">まだありません</td></tr>') + '</tbody></table></div>';
     return h;
   }
 
@@ -842,10 +846,10 @@
       (cloud ? '<span class="tag tag-ok">つながっています</span>'
              : '<span class="tag tag-dim">つないでいません</span>') + '</div>';
     if (cloud) {
-      h += '<table class="tbl" style="margin-bottom:1rem"><tbody>' +
+      h += '<div class="tbl-wrap"><table class="tbl" style="margin-bottom:1rem"><tbody>' +
         '<tr><th style="width:12em">プロジェクトID</th><td class="mono">' + esc(cfg.projectId) + '</td></tr>' +
         '<tr><th>ログイン中</th><td class="mono">' + esc((EZ.cloud.currentUser() || {}).email || '—') + '</td></tr>' +
-        '</tbody></table>' +
+        '</tbody></table></div>' +
         '<div class="row">' +
         '<button class="btn btn-ghost btn-s" id="c-seed">講座・教材・文言を書き込む</button>' +
         '<button class="btn btn-danger btn-s" id="c-off">接続を解除する</button></div>' +
@@ -1050,10 +1054,17 @@
   function bindCommon() {
     var lo = $('#adminLogout');
     if (lo) lo.addEventListener('click', function (e) { e.preventDefault(); EZ.cloud.stop(); EZ.cloud.signOut(); });
+    function setNav(open) {
+      $('#side').classList.toggle('open', open);
+      var sc = $('#scrim');
+      if (sc) sc.classList.toggle('on', open);
+    }
     var mb = $('#menuBtn');
-    if (mb) mb.addEventListener('click', function () { $('#side').classList.toggle('open'); });
+    if (mb) mb.addEventListener('click', function () { setNav(!$('#side').classList.contains('open')); });
+    var sc = $('#scrim');
+    if (sc) sc.addEventListener('click', function () { setNav(false); });
     $$('.side a.nav').forEach(function (a) {
-      a.addEventListener('click', function () { $('#side').classList.remove('open'); });
+      a.addEventListener('click', function () { setNav(false); });
     });
   }
 

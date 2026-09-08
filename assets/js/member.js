@@ -137,14 +137,14 @@
 
   /* ================= 枠 ================= */
   var NAV = [
-    { id: 'home', label: 'ホーム' },
-    { id: 'lessons', label: '動画講座' },
-    { id: 'feed', label: '配信アーカイブ' },
-    { id: 'materials', label: '教材ダウンロード' },
-    { id: 'reports', label: '週1レポート' },
-    { id: 'questions', label: '質問' },
-    { id: 'messages', label: 'メッセージ' },
-    { id: 'account', label: 'アカウント' }
+    { id: 'home', label: 'ホーム', icon: 'home' },
+    { id: 'lessons', label: '動画講座', icon: 'lessons' },
+    { id: 'feed', label: '配信アーカイブ', icon: 'feed' },
+    { id: 'materials', label: '教材', icon: 'materials' },
+    { id: 'reports', label: '週1レポート', icon: 'reports' },
+    { id: 'questions', label: '質問', icon: 'questions' },
+    { id: 'messages', label: 'メッセージ', icon: 'messages' },
+    { id: 'account', label: 'アカウント', icon: 'account' }
   ];
 
   function shell(inner) {
@@ -158,7 +158,7 @@
       NAV.map(function (n) {
         var unread = n.id === 'messages' ? R.unreadForMember(db, me) : 0;
         return '<a class="nav' + (page === n.id ? ' on' : '') + '" href="#' + n.id + '">' +
-          '<span>' + esc(n.label) + '</span>' +
+          U.icon(n.icon) + '<span>' + esc(n.label) + '</span>' +
           (unread ? '<span class="n">' + unread + '</span>' : '') + '</a>';
       }).join('') +
       '<div class="side-foot">' +
@@ -167,6 +167,7 @@
       '<a href="#" id="logout" style="margin-top:6px;display:inline-block">ログアウト</a>' +
       '</div></aside>' +
       '<div>' +
+      '<div class="scrim" id="scrim"></div>' +
       '<div class="mobile-head"><button id="menuBtn">メニュー</button>' +
       '<picture><source srcset="assets/img/logo-full.webp" type="image/webp"><img class="brand__logo" src="assets/img/logo-full.png" alt="株式会社知上会" width="600" height="215"></picture>' +
       '<span class="ttl-s">' + esc(db.settings.siteName) + '</span></div>' +
@@ -242,7 +243,8 @@
 
     var recent = R.visiblePosts(db, now).slice(0, 3);
     if (recent.length) {
-      h += '<h2 class="ttl-s">最近の配信</h2>' + recent.map(postCard).join('') +
+      h += '<h2 class="ttl-s">最近の配信</h2>' +
+        '<div class="post-list" style="margin-bottom:1rem">' + recent.map(postCard).join('') + '</div>' +
         '<a class="btn btn-ghost btn-s" href="#feed">配信アーカイブへ</a>';
     }
     return h;
@@ -255,7 +257,7 @@
     var h = pagehead('動画講座（全' + db.lessons.length + '回）',
       '第1回は入会直後から見られます。第2回以降は、前の回の課題を出すとその場で開きます。事務局の承認待ちはありません。');
     h += blockedNotice();
-    h += states.map(function (s) {
+    h += '<div class="lesson-group">' + states.map(function (s) {
       var l = s.lesson;
       var open = s.unlocked && !s.submitted;
       return '<div class="lesson' + (s.unlocked ? '' : ' locked') + (open ? ' open' : '') + '" data-lesson="' + l.no + '">' +
@@ -266,11 +268,12 @@
         (s.submitted ? '<span class="tag tag-ok">提出済み</span>' :
           s.unlocked ? '<span class="tag tag-sea">受講できます</span>' :
             '<span class="tag tag-dim">🔒 ' + esc(s.lockedBy) + '</span>') +
-        '<span class="len muted mono small">' + l.minutes + '分</span>' +
+        '<span class="len">' + l.minutes + '分</span>' +
+        (s.unlocked ? U.chevron() : '') +
         '</div></div>' +
         '<div class="lesson-body">' + (s.unlocked ? lessonBody(l, s) : '') + '</div>' +
         '</div>';
-    }).join('');
+    }).join('') + '</div>';
     return h;
   }
 
@@ -391,7 +394,9 @@
       '「殿堂入り」の印がついたものだけはずっと残ります。');
     h += blockedNotice();
     if (!R.canView(me, now)) return h;
-    h += posts.length ? posts.map(postCard).join('') : '<div class="expired-note">いま読める配信はありません。</div>';
+    h += posts.length
+      ? '<div class="post-list">' + posts.map(postCard).join('') + '</div>'
+      : '<div class="expired-note">いま読める配信はありません。</div>';
     if (expiredCount) {
       h += '<div class="expired-note" style="margin-top:16px">掲載期間が終わった配信が ' + expiredCount + ' 本あります。' +
         '会員限定配信は直近' + db.settings.archiveWindowDays + '日ぶんだけを置いています。</div>';
@@ -405,16 +410,17 @@
     var h = pagehead('教材ダウンロード', '会員限定のPDFです。講座と一緒に使ってください。');
     h += blockedNotice();
     if (!R.canView(me, now)) return h;
-    h += db.materials.map(function (m) {
-      return '<div class="mat"><div class="ic">PDF</div><div class="tx"><h4>' + esc(m.title) + '</h4>' +
-        '<p>' + esc(m.note) + '</p></div>' +
-        '<button class="btn btn-ghost btn-xs" data-dl="' + esc(m.title) + '">開く</button></div>';
-    }).join('');
+    h += '<div class="mat-list">' + db.materials.map(function (m) {
+      return '<div class="mat" data-dl="' + esc(m.title) + '"><div class="ic">PDF</div>' +
+        '<div class="tx"><h4>' + esc(m.title) + '</h4><p>' + esc(m.note) + '</p></div>' +
+        U.chevron() + '</div>';
+    }).join('') + '</div>';
     if (me.flags.guideDeliveredAt) {
-      h += '<h2 class="ttl-s" style="margin-top:34px">第7回の提出でお渡ししたもの</h2>' +
-        '<div class="mat mat--gold"><div class="ic">PDF</div>' +
+      h += '<h2 class="ttl-s">第7回の提出でお渡ししたもの</h2>' +
+        '<div class="mat-list"><div class="mat mat--gold" data-dl="' + esc(db.guide.title) + '">' +
+        '<div class="ic">PDF</div>' +
         '<div class="tx"><h4>' + esc(db.guide.title) + '</h4><p>' + R.fmtDate(me.flags.guideDeliveredAt) + 'にお渡ししました</p></div>' +
-        '<button class="btn btn-xs" data-dl="' + esc(db.guide.title) + '">開く</button></div>';
+        U.chevron() + '</div></div>';
     }
     return h;
   }
@@ -531,17 +537,17 @@
       : '<p class="small muted" style="border-top:1px solid var(--ink);padding-top:1.2rem">' +
         'まだやりとりはありません。下から送れます。</p>';
 
-    h += '<div style="margin-top:2rem">' +
+    h += '<h2 class="ttl-s">事務局へ送る</h2>' +
       (open
-        ? '<label class="field"><span class="lbl">事務局へ送る</span>' +
-          '<textarea id="m-body" placeholder="お困りごとや、講座の中で分からなかったところなど。"></textarea></label>' +
+        ? '<div class="card">' +
+          '<textarea id="m-body" placeholder="お困りごとや、講座の中で分からなかったところなど。"></textarea>' +
+          '<div class="row" style="margin-top:.9rem">' +
           '<button class="btn btn-fill" id="m-send">送る</button>' +
-          '<p class="small muted" style="margin-top:.8rem">' +
-          '代表が直接読んでいます。返信までお時間をいただくことがあります。</p>'
-        : '<div class="card-flat"><p class="small muted">' +
+          '<span class="small muted">代表が直接読んでいます。返信までお時間をいただくことがあります。</span>' +
+          '</div></div>'
+        : '<div class="card"><p class="small muted">' +
           'いまメッセージの受付を止めています。お急ぎのご用件は ' +
-          esc(db.settings.supportEmail) + ' までお願いします。</p></div>') +
-      '</div>';
+          esc(db.settings.supportEmail) + ' までお願いします。</p></div>');
     return h;
   }
 
@@ -605,13 +611,13 @@
     }
 
     h += '<h2 class="ttl-s">お支払いの履歴</h2>';
-    h += '<table class="tbl" style="margin-bottom:34px"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th></tr></thead><tbody>' +
+    h += '<div class="tbl-wrap" style="margin-bottom:1.6rem"><table class="tbl"><thead><tr><th>日付</th><th>内容</th><th class="num">金額</th><th>状態</th></tr></thead><tbody>' +
       (pays.length ? pays.map(function (p) {
         return '<tr><td class="mono">' + R.fmtDate(p.at) + '</td>' +
           '<td>' + (p.kind === 'initial' ? '入会金' : '月額') + '</td>' +
           '<td class="num">' + R.fmtYen(p.amount) + '</td>' +
           '<td>' + payTag(p.status) + '</td></tr>';
-      }).join('') : '<tr><td colspan="4" class="muted">まだありません</td></tr>') + '</tbody></table>';
+      }).join('') : '<tr><td colspan="4" class="muted">まだありません</td></tr>') + '</tbody></table></div>';
 
     h += '<h2 class="ttl-s">解約</h2>';
     if (b.cancelRequestedAt) {
@@ -696,6 +702,7 @@
     $$('[data-dl]').forEach(function (b) {
       b.addEventListener('click', function () { U.toast('「' + b.dataset.dl + '」を開きました（本番ではPDFが開きます）'); });
     });
+    /* 押せる行には山かっこを出しているので、行ごと押せることを見た目でも示す */
   }
 
   function bindCommon() {
@@ -704,10 +711,17 @@
       if (S.mode() === 'cloud') { EZ.cloud.stop(); EZ.cloud.signOut(); return; }
       S.session.clear(); boot();
     });
+    function setNav(open) {
+      $('#side').classList.toggle('open', open);
+      var sc = $('#scrim');
+      if (sc) sc.classList.toggle('on', open);
+    }
     var mb = $('#menuBtn');
-    if (mb) mb.addEventListener('click', function () { $('#side').classList.toggle('open'); });
+    if (mb) mb.addEventListener('click', function () { setNav(!$('#side').classList.contains('open')); });
+    var sc = $('#scrim');
+    if (sc) sc.addEventListener('click', function () { setNav(false); });
     $$('.side a.nav').forEach(function (a) {
-      a.addEventListener('click', function () { $('#side').classList.remove('open'); });
+      a.addEventListener('click', function () { setNav(false); });
     });
   }
 
